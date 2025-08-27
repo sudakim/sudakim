@@ -435,77 +435,174 @@ with tab3:
     schedule_date = st.date_input("📅 날짜 선택", datetime.now(), key="schedule_date")
     schedule_date_key = schedule_date.strftime('%Y-%m-%d')
     
-    # 해당 날짜의 콘텐츠 가져오기
+    # 스케줄 초기화
+    if schedule_date_key not in st.session_state.schedules:
+        st.session_state.schedules[schedule_date_key] = []
+    
+    schedule = st.session_state.schedules[schedule_date_key]
+    
+    st.markdown(f"### 📅 {schedule_date.strftime('%Y년 %m월 %d일')} 일정")
+    
+    # 일정 추가 섹션
+    with st.expander("➕ 새 일정 추가", expanded=False):
+        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+        
+        with col1:
+            new_start = st.time_input("시작 시간", time(12, 0), key="new_start")
+        with col2:
+            new_end = st.time_input("종료 시간", time(13, 0), key="new_end")
+        with col3:
+            schedule_type = st.selectbox("유형", ["🎬 촬영", "🍽️ 식사", "☕ 휴식", "📝 회의", "🚗 이동", "🎯 기타"], key="new_type")
+        with col4:
+            new_title = st.text_input("일정 제목", key="new_title", placeholder="일정 내용")
+        with col5:
+            if st.button("추가", type="primary"):
+                if new_title:
+                    schedule.append({
+                        'start': new_start.strftime('%H:%M'),
+                        'end': new_end.strftime('%H:%M'),
+                        'type': schedule_type,
+                        'title': new_title,
+                        'content_id': None,
+                        'details': ''
+                    })
+                    st.session_state.schedules[schedule_date_key] = schedule
+                    auto_save()
+                    st.rerun()
+    
+    # 콘텐츠 빠른 추가
     if schedule_date_key in st.session_state.daily_contents and st.session_state.daily_contents[schedule_date_key]:
         contents = st.session_state.daily_contents[schedule_date_key]
         
-        st.markdown(f"### 📅 {schedule_date.strftime('%Y년 %m월 %d일')} 촬영 일정")
-        
-        # 시작 시간 설정
-        default_start = st.time_input("🕐 촬영 시작 시간", time(12, 40))
-        
-        # 콘텐츠별 타임테이블 생성
-        current_time = datetime.combine(schedule_date, default_start)
-        
-        for idx, content in enumerate(contents):
-            if not content.get('title'):
-                continue
+        with st.expander("📺 콘텐츠 일괄 추가", expanded=False):
+            st.write("기획된 콘텐츠를 타임테이블에 추가:")
+            
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                default_start_time = st.time_input("시작 시간", time(12, 40), key="batch_start")
+            with col2:
+                default_duration = st.selectbox("기본 촬영 시간", ["50분", "1시간", "1시간 30분"], key="batch_duration")
+            
+            duration_map = {"50분": 50, "1시간": 60, "1시간 30분": 90}
+            
+            if st.button("콘텐츠 전체 추가", key="add_all_contents"):
+                current = datetime.combine(schedule_date, default_start_time)
                 
-            with st.expander(f"📺 {content['title']}", expanded=True):
-                col1, col2, col3 = st.columns([2, 2, 4])
+                for content in contents:
+                    if content.get('title'):
+                        end = current + timedelta(minutes=duration_map[default_duration])
+                        schedule.append({
+                            'start': current.strftime('%H:%M'),
+                            'end': end.strftime('%H:%M'),
+                            'type': '🎬 촬영',
+                            'title': content['title'],
+                            'content_id': content.get('id'),
+                            'details': content.get('final', '')[:100] if content.get('final') else ''
+                        })
+                        current = end + timedelta(minutes=10)  # 10분 휴식
+                
+                st.session_state.schedules[schedule_date_key] = schedule
+                auto_save()
+                st.rerun()
+    
+    # 타임테이블 표시 및 수정
+    if schedule:
+        st.markdown("### 📋 일정 목록")
+        
+        # 시간순 정렬
+        schedule.sort(key=lambda x: x['start'])
+        
+        for idx, item in enumerate(schedule):
+            with st.container():
+                col1, col2, col3, col4, col5, col6 = st.columns([2, 2, 1, 3, 3, 1])
                 
                 with col1:
-                    # 시간 설정
-                    duration_options = ["50분", "1시간", "1시간 30분", "2시간"]
-                    duration = st.selectbox(
-                        "촬영 시간",
-                        duration_options,
-                        key=f"duration_{schedule_date_key}_{idx}"
+                    # 시간 수정 가능
+                    start_time = st.time_input(
+                        "시작",
+                        datetime.strptime(item['start'], '%H:%M').time(),
+                        key=f"start_{idx}",
+                        label_visibility="collapsed"
                     )
-                    
-                    # 시간 계산
-                    duration_map = {"50분": 50, "1시간": 60, "1시간 30분": 90, "2시간": 120}
-                    duration_mins = duration_map[duration]
-                    end_time = current_time + timedelta(minutes=duration_mins)
-                    
-                    st.write(f"**{current_time.strftime('%H:%M')} ~ {end_time.strftime('%H:%M')}**")
-                    current_time = end_time + timedelta(minutes=10)  # 10분 휴식
+                    item['start'] = start_time.strftime('%H:%M')
                 
                 with col2:
-                    # 최종 픽스 내용
-                    if content.get('final'):
-                        st.text_area(
-                            "최종 내용",
-                            value=content['final'][:100] + "...",
-                            height=100,
-                            disabled=True,
-                            key=f"final_view_{schedule_date_key}_{idx}"
-                        )
-                    else:
-                        st.warning("최종 픽스 미완료")
+                    # 종료 시간 수정 가능
+                    end_time = st.time_input(
+                        "종료",
+                        datetime.strptime(item['end'], '%H:%M').time(),
+                        key=f"end_{idx}",
+                        label_visibility="collapsed"
+                    )
+                    item['end'] = end_time.strftime('%H:%M')
                 
                 with col3:
-                    # 수령 완료된 소품 표시
-                    content_id = content.get('id', f"{schedule_date_key}_{idx}")
-                    if content_id in st.session_state.content_props:
-                        props = st.session_state.content_props[content_id]
+                    st.write(item['type'])
+                
+                with col4:
+                    # 제목 수정 가능
+                    item['title'] = st.text_input(
+                        "제목",
+                        value=item['title'],
+                        key=f"title_{idx}",
+                        label_visibility="collapsed"
+                    )
+                
+                with col5:
+                    # 상세 내용 또는 소품 정보
+                    if item.get('content_id') and item['content_id'] in st.session_state.content_props:
+                        props = st.session_state.content_props[item['content_id']]
                         completed_props = [p for p in props if p['status'] == '수령완료']
-                        
                         if completed_props:
-                            st.write("**✅ 준비 완료 소품:**")
-                            props_text = ", ".join([f"{p['name']} ({p['vendor']})" for p in completed_props])
-                            st.success(props_text)
-                        else:
-                            st.warning("⚠️ 수령 완료된 소품 없음")
-                    else:
-                        st.info("등록된 소품 없음")
+                            st.success(f"✅ 소품 {len(completed_props)}개 준비")
+                    
+                    # 메모 추가
+                    item['details'] = st.text_input(
+                        "메모",
+                        value=item.get('details', ''),
+                        key=f"details_{idx}",
+                        placeholder="메모",
+                        label_visibility="collapsed"
+                    )
+                
+                with col6:
+                    col_up, col_down, col_del = st.columns(3)
+                    with col_up:
+                        if st.button("↑", key=f"up_{idx}", help="위로"):
+                            if idx > 0:
+                                schedule[idx], schedule[idx-1] = schedule[idx-1], schedule[idx]
+                                st.session_state.schedules[schedule_date_key] = schedule
+                                auto_save()
+                                st.rerun()
+                    with col_down:
+                        if st.button("↓", key=f"down_{idx}", help="아래로"):
+                            if idx < len(schedule) - 1:
+                                schedule[idx], schedule[idx+1] = schedule[idx+1], schedule[idx]
+                                st.session_state.schedules[schedule_date_key] = schedule
+                                auto_save()
+                                st.rerun()
+                    with col_del:
+                        if st.button("🗑️", key=f"del_schedule_{idx}"):
+                            schedule.pop(idx)
+                            st.session_state.schedules[schedule_date_key] = schedule
+                            auto_save()
+                            st.rerun()
+                
+                st.divider()
         
-        # 전체 일정 요약
-        st.divider()
-        st.info(f"📌 **전체 촬영 시간**: {default_start.strftime('%H:%M')} ~ {current_time.strftime('%H:%M')}")
+        # 저장 버튼
+        if st.button("💾 타임테이블 저장", type="primary", key="save_schedule"):
+            st.session_state.schedules[schedule_date_key] = schedule
+            auto_save()
+            st.success("타임테이블이 저장되었습니다!")
         
+        # 전체 시간 요약
+        if schedule:
+            first_start = min(schedule, key=lambda x: x['start'])['start']
+            last_end = max(schedule, key=lambda x: x['end'])['end']
+            st.info(f"📌 **전체 일정**: {first_start} ~ {last_end}")
     else:
-        st.warning(f"⚠️ {schedule_date.strftime('%Y년 %m월 %d일')}에 생성된 콘텐츠가 없습니다.")
+        st.info("일정이 없습니다. 위에서 새 일정을 추가하세요.")
 
 # 사이드바
 with st.sidebar:
