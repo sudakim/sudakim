@@ -69,8 +69,14 @@ def load_from_gist():
 def check_password():
     """비밀번호 확인"""
     
+    # Secrets에서 비밀번호 가져오기
+    try:
+        PASSWORD = st.secrets["app_password"]
+    except:
+        PASSWORD = "youtube1234"  # 로컬 테스트용 기본값
+    
     def password_entered():
-        if st.session_state["password"] == "youtube1234":  # 비밀번호 변경
+        if st.session_state["password"] == PASSWORD:
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
@@ -304,3 +310,4 @@ with tab1:
         st.info("👆 '양식 생성' 버튼을 클릭하여 콘텐츠를 추가하세요.")
 
 # 나머지 탭 코드는 동일...
+
