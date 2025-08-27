@@ -11,7 +11,7 @@ import webbrowser
 def connect_firestore():
     """Streamlit Secrets를 사용하여 Firestore에 연결합니다."""
     # st.secrets에서 JSON 키 정보를 가져옵니다.
-    key_dict = json.loads(st.secrets["gcp_service_account"])
+    key_dict = json.loads(st.secrets["textkey"])
     # Firestore 클라이언트를 초기화하고 반환합니다.
     creds = firestore.Client.from_service_account_info(key_dict)
     return creds
@@ -370,4 +370,5 @@ with tab3:
         
     else:
         st.warning(f"⚠️ {schedule_date.strftime('%Y년 %m월 %d일')}에 생성된 콘텐츠가 없습니다.")
+
 
