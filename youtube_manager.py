@@ -11,40 +11,66 @@ st.set_page_config(
     layout="wide"
 )
 
-# ========== 구글 시트 설정 ==========
-# 1. 구글 시트를 만들고 "링크가 있는 모든 사용자 - 편집자"로 공유
-# 2. 아래 URL에 시트 ID 입력
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1g5bLvVLHou116z7v_E0r_Gu571FKP4s8QzfmKRIzdHQ/export?format=csv&gid=0"
-SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/1g5bLvVLHou116z7v_E0r_Gu571FKP4s8QzfmKRIzdHQ/edit"
+# ========== GitHub Gist 설정 (자동 동기화) ==========
+# 1. GitHub에서 Personal Access Token 생성
+# 2. 새 Gist 만들기
+# 3. 아래에 정보 입력
 
-# 간단한 데이터 저장/불러오기 (CSV 형식 사용)
-def save_data_simple():
-    """로컬 세션 데이터를 JSON으로 변환"""
-    data = {
-        'contents': st.session_state.daily_contents,
-        'props': st.session_state.content_props,
-        'schedules': st.session_state.schedules,
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-    return json.dumps(data, ensure_ascii=False)
+# Streamlit Secrets 사용 (배포시)
+try:
+    GITHUB_TOKEN = st.secrets["github_token"]
+    GIST_ID = st.secrets["gist_id"]
+except:
+    # 로컬 테스트용 (실제 값으로 변경 필요)
+    GITHUB_TOKEN = "ghp_YOUR_GITHUB_TOKEN_HERE"  # GitHub 토큰
+    GIST_ID = "YOUR_GIST_ID_HERE"  # Gist ID
 
-def load_data_simple(json_str):
-    """JSON 문자열을 세션 데이터로 변환"""
+# GitHub Gist 함수들
+def save_to_gist(data):
+    """GitHub Gist에 자동 저장"""
     try:
-        data = json.loads(json_str)
-        st.session_state.daily_contents = data.get('contents', {})
-        st.session_state.content_props = data.get('props', {})
-        st.session_state.schedules = data.get('schedules', {})
-        return True
+        url = f"https://api.github.com/gists/{GIST_ID}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        payload = {
+            "files": {
+                "youtube_data.json": {
+                    "content": json.dumps(data, ensure_ascii=False, indent=2)
+                }
+            }
+        }
+        
+        response = requests.patch(url, json=payload, headers=headers)
+        return response.status_code == 200
     except:
         return False
+
+def load_from_gist():
+    """GitHub Gist에서 자동 불러오기"""
+    try:
+        url = f"https://api.github.com/gists/{GIST_ID}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            content = response.json()["files"]["youtube_data.json"]["content"]
+            return json.loads(content)
+        return None
+    except:
+        return None
 
 # ========== 비밀번호 체크 ==========
 def check_password():
     """비밀번호 확인"""
     
     def password_entered():
-        if st.session_state["password"] == "0803":  # 비밀번호 변경
+        if st.session_state["password"] == "youtube1234":  # 비밀번호 변경
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
@@ -58,7 +84,6 @@ def check_password():
             on_change=password_entered, 
             key="password"
         )
-        st.info("💡 6명의 팀원만 아는 비밀번호를 입력하세요")
         return False
     elif not st.session_state["password_correct"]:
         st.title("🔐 유튜브 콘텐츠 매니저")
@@ -76,75 +101,79 @@ def check_password():
 if not check_password():
     st.stop()
 
-# ========== 세션 초기화 ==========
-if 'daily_contents' not in st.session_state:
-    st.session_state.daily_contents = {}
-if 'content_props' not in st.session_state:
-    st.session_state.content_props = {}
-if 'schedules' not in st.session_state:
-    st.session_state.schedules = {}
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = datetime.now()
+# ========== 세션 초기화 (자동으로 Gist에서 불러오기) ==========
+if 'initialized' not in st.session_state:
+    st.session_state.initialized = False
+
+if not st.session_state.initialized:
+    # Gist에서 데이터 불러오기
+    data = load_from_gist()
+    if data:
+        st.session_state.daily_contents = data.get('contents', {})
+        st.session_state.content_props = data.get('props', {})
+        st.session_state.schedules = data.get('schedules', {})
+        st.toast("☁️ 클라우드에서 데이터를 불러왔습니다", icon='✅')
+    else:
+        st.session_state.daily_contents = {}
+        st.session_state.content_props = {}
+        st.session_state.schedules = {}
+    st.session_state.initialized = True
+
+# 자동 저장 함수
+def auto_save():
+    """변경사항을 GitHub Gist에 자동 저장"""
+    data = {
+        'contents': st.session_state.daily_contents,
+        'props': st.session_state.content_props,
+        'schedules': st.session_state.schedules,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'updated_by': st.session_state.get('user_name', 'Unknown')
+    }
+    
+    if save_to_gist(data):
+        st.session_state.last_save = datetime.now().strftime('%H:%M:%S')
+        return True
+    return False
+
+# 데이터 새로고침
+def refresh_data():
+    """최신 데이터 불러오기"""
+    data = load_from_gist()
+    if data:
+        st.session_state.daily_contents = data.get('contents', {})
+        st.session_state.content_props = data.get('props', {})
+        st.session_state.schedules = data.get('schedules', {})
+        st.session_state.initialized = True
+        st.toast("🔄 최신 데이터를 불러왔습니다", icon='✅')
+        st.rerun()
 
 # ========== 메인 UI ==========
 # 헤더
-col1, col2, col3, col4 = st.columns([5, 1, 1, 2])
+col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
 with col1:
     st.title("🎬 유튜브 콘텐츠 통합 매니저")
 with col2:
     if st.button("🔄 새로고침"):
-        st.rerun()
+        refresh_data()
 with col3:
     if st.button("💾 저장"):
-        st.success("저장됨!")
+        if auto_save():
+            st.toast("☁️ 클라우드에 저장되었습니다", icon='✅')
+        else:
+            st.error("저장 실패")
 with col4:
-    # 구글 시트 링크
-    st.link_button("📊 구글시트 열기", SHEET_EDIT_URL)
+    # 사용자 이름 (선택사항)
+    name = st.text_input("이름", key="user_name", placeholder="홍길동", label_visibility="collapsed")
 
-# 자동 새로고침 안내
-refresh_time = (datetime.now() - st.session_state.last_refresh).seconds
-st.caption(f"🔄 {refresh_time}초 전 새로고침 | 💡 다른 사람이 수정한 내용을 보려면 새로고침 버튼을 눌러주세요")
-
-# ========== 데이터 저장 영역 ==========
-st.sidebar.header("📝 데이터 동기화")
-st.sidebar.caption("아래 텍스트를 복사해서 구글 시트에 붙여넣으세요")
-
-# 현재 데이터를 JSON으로 표시
-data_json = save_data_simple()
-st.sidebar.text_area(
-    "현재 데이터 (복사용)",
-    value=data_json,
-    height=200,
-    key="export_data"
-)
-
-st.sidebar.divider()
-
-# 데이터 불러오기
-st.sidebar.subheader("📥 데이터 불러오기")
-imported_data = st.sidebar.text_area(
-    "구글 시트의 데이터를 여기에 붙여넣기",
-    height=200,
-    key="import_data",
-    placeholder="구글 시트에서 복사한 JSON 데이터를 붙여넣으세요"
-)
-
-if st.sidebar.button("불러오기", type="primary"):
-    if load_data_simple(imported_data):
-        st.sidebar.success("✅ 데이터를 불러왔습니다!")
-        st.rerun()
+# 상태 표시
+status_col1, status_col2 = st.columns([3, 1])
+with status_col1:
+    if 'last_save' in st.session_state:
+        st.caption(f"☁️ 자동 저장 ON | 마지막 저장: {st.session_state.last_save}")
     else:
-        st.sidebar.error("❌ 데이터 형식이 올바르지 않습니다")
-
-st.sidebar.divider()
-st.sidebar.caption("""
-**사용 방법:**
-1. 작업 후 '현재 데이터' 복사
-2. 구글 시트에 붙여넣기
-3. 다른 팀원이 수정한 내용 보기:
-   - 구글 시트에서 데이터 복사
-   - '데이터 불러오기'에 붙여넣기
-""")
+        st.caption("☁️ 자동 저장 ON | GitHub Gist 동기화 중")
+with status_col2:
+    st.caption("💡 모든 변경사항이 자동 저장됩니다")
 
 # ========== 탭 메뉴 (기존 코드와 동일) ==========
 tab1, tab2, tab3 = st.tabs(["📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블"])
@@ -185,6 +214,7 @@ with tab1:
                     'final': '',
                     'reference': ''
                 })
+            auto_save()  # 자동 저장
             st.rerun()
     
     st.divider()
@@ -196,10 +226,15 @@ with tab1:
         
         for idx, content in enumerate(contents):
             with st.expander(f"콘텐츠 #{idx+1} - {content.get('title', '제목 없음')}", expanded=True):
+                
+                # 변경 감지를 위한 이전 값 저장
+                old_values = content.copy()
+                
                 col_del, col_title = st.columns([1, 5])
                 with col_del:
                     if st.button("🗑️ 삭제", key=f"del_{date_key}_{idx}"):
                         st.session_state.daily_contents[date_key].pop(idx)
+                        auto_save()
                         st.rerun()
                 
                 with col_title:
@@ -259,9 +294,13 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 
+                # 값이 변경되면 자동 저장
+                if old_values != content:
+                    auto_save()
+                
                 progress = sum([25 for field in ['draft', 'feedback', 'revision', 'final'] if content.get(field)])
                 st.progress(progress / 100, text=f"진행률: {progress}%")
     else:
         st.info("👆 '양식 생성' 버튼을 클릭하여 콘텐츠를 추가하세요.")
 
-# 나머지 탭들도 동일한 구조로 구현...
+# 나머지 탭 코드는 동일...
