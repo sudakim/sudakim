@@ -21,17 +21,20 @@ st.markdown("""
             width: 90px !important;
         }
         .row-widget.stButton {
-            width: 100%;
+            padding: 0.1rem !important;
+        }
+        .row-widget.stButton button {
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.9rem !important;
+        }
+        /* expander 패딩 축소 */
+        .streamlit-expanderHeader {
+            padding: 0.5rem !important;
         }
     }
-    /* 유튜브 모달 스타일 */
-    .youtube-modal {
-        position: fixed;
-        z-index: 9999;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        padding: 10px;
+    /* 버튼 간격 축소 */
+    div[data-testid="column"] > div {
+        padding: 0 2px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -596,36 +599,36 @@ with tab3:
                                 performers_info = " (" + ", ".join(c['performers']) + ")"
                             break
             
-            # 요약 보기
+            # 요약 보기 - 모바일 최적화
             with st.container():
-                col1, col2, col3, col4 = st.columns([1.5, 1, 3, 1])
+                col1, col2 = st.columns([5, 1])
                 
                 with col1:
-                    st.write(f"**{item['start']} - {item['end']}**")
+                    st.write(f"**{item['start']} - {item['end']}** {item['type']}")
+                    st.write(f"{item['title']}{performers_info}")
+                
                 with col2:
-                    st.write(item['type'])
-                with col3:
-                    # 제목과 출연자 표시
-                    st.write(f"**{item['title']}**{performers_info}")
-                with col4:
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        if st.button("↑", key=f"up_{idx}"):
-                            if idx > 0:
-                                schedule[idx], schedule[idx-1] = schedule[idx-1], schedule[idx]
+                    # 버튼 3개를 세로로 컴팩트하게
+                    btn_col = st.container()
+                    with btn_col:
+                        btn_cols = st.columns(3)
+                        with btn_cols[0]:
+                            if st.button("↑", key=f"up_{idx}", help="위로"):
+                                if idx > 0:
+                                    schedule[idx], schedule[idx-1] = schedule[idx-1], schedule[idx]
+                                    auto_save()
+                                    st.rerun()
+                        with btn_cols[1]:
+                            if st.button("↓", key=f"down_{idx}", help="아래"):
+                                if idx < len(schedule) - 1:
+                                    schedule[idx], schedule[idx+1] = schedule[idx+1], schedule[idx]
+                                    auto_save()
+                                    st.rerun()
+                        with btn_cols[2]:
+                            if st.button("🗑️", key=f"del_{idx}", help="삭제"):
+                                schedule.pop(idx)
                                 auto_save()
                                 st.rerun()
-                    with c2:
-                        if st.button("↓", key=f"down_{idx}"):
-                            if idx < len(schedule) - 1:
-                                schedule[idx], schedule[idx+1] = schedule[idx+1], schedule[idx]
-                                auto_save()
-                                st.rerun()
-                    with c3:
-                        if st.button("🗑️", key=f"del_{idx}"):
-                            schedule.pop(idx)
-                            auto_save()
-                            st.rerun()
             
             # 상세 보기 (토글)
             with st.expander("상세보기"):
