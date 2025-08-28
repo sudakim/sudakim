@@ -280,6 +280,16 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 
+                # 출연자 선택
+                performers = ["전부", "다혜", "수빈", "예람", "보조"]
+                selected_performers = st.multiselect(
+                    "출연자",
+                    performers,
+                    default=content.get('performers', []),
+                    key=f"{date_key}_performers_{idx}"
+                )
+                content['performers'] = selected_performers
+                
                 # 레퍼런스 링크
                 col_ref, col_watch = st.columns([4, 1])
                 with col_ref:
@@ -287,13 +297,18 @@ with tab1:
                         "링크",
                         value=content.get('reference', ''),
                         key=f"{date_key}_ref_{idx}",
-                        placeholder="YouTube 링크",
+                        placeholder="YouTube/Instagram 링크",
                         label_visibility="collapsed"
                     )
                 with col_watch:
                     if content.get('reference'):
-                        if st.button("▶️", key=f"watch_{date_key}_{idx}"):
-                            st.session_state[f"show_video_{date_key}_{idx}"] = True
+                        # YouTube
+                        if 'youtube' in content['reference'] or 'youtu.be' in content['reference']:
+                            if st.button("▶️", key=f"watch_{date_key}_{idx}"):
+                                st.session_state[f"show_video_{date_key}_{idx}"] = True
+                        # Instagram Reels
+                        elif 'instagram.com/reel' in content['reference']:
+                            st.link_button("📷", content['reference'], help="Instagram에서 보기")
                 
                 # 유튜브 플레이어
                 if st.session_state.get(f"show_video_{date_key}_{idx}"):
@@ -410,7 +425,7 @@ with tab2:
                         ["예정", "주문완료", "배송중", "수령완료"],
                         key=f"new_s_{content_id}")
                 with col5:
-                    if st.button("+", key=f"add_{content_id}", type="primary"):
+                    if st.button("추가", key=f"add_{content_id}", type="primary"):
                         if new_name:
                             props.append({
                                 'name': new_name,
@@ -572,7 +587,20 @@ with tab3:
                 with col2:
                     st.write(item['type'])
                 with col3:
-                    st.write(f"**{item['title']}**")
+                    # 제목과 출연자 표시
+                    display_text = f"**{item['title']}**"
+                    
+                    # 콘텐츠에서 출연자 정보 가져오기
+                    if item.get('content_id'):
+                        for date_contents in st.session_state.daily_contents.values():
+                            for c in date_contents:
+                                if c.get('id') == item['content_id']:
+                                    if c.get('performers'):
+                                        performers_str = ", ".join(c['performers'])
+                                        display_text += f"\n👥 {performers_str}"
+                                    break
+                    
+                    st.write(display_text)
                 with col4:
                     c1, c2, c3 = st.columns(3)
                     with c1:
