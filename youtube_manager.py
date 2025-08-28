@@ -229,7 +229,8 @@ with tab1:
                     'feedback': '',
                     'revision': '',
                     'final': '',
-                    'reference': ''
+                    'reference': '',
+                    'performers': []
                 })
             auto_save()
             st.rerun()
@@ -242,7 +243,10 @@ with tab1:
         contents = st.session_state.daily_contents[date_key]
         
         for idx, content in enumerate(contents):
-            with st.expander(f"#{idx+1}. {content.get('title', '제목 없음')}", expanded=True):
+            # 제목이 있으면 제목 표시, 없으면 번호만 표시
+            expander_title = f"#{idx+1}. {content.get('title', '')}" if content.get('title') else f"#{idx+1}"
+            
+            with st.expander(expander_title, expanded=True):
                 
                 # 상단 버튼들
                 col_del, col_move, col_title = st.columns([1, 2, 3])
@@ -389,7 +393,11 @@ with tab2:
             content_total = sum(p['price'] for p in props)
             total_props += content_total
             
-            with st.expander(f"#{idx+1}. {content.get('title', '제목 없음')} ({len(props)}개 / {content_total:,}원)"):
+            # 제목이 있으면 제목 표시, 없으면 번호만 표시
+            expander_title = f"#{idx+1}. {content.get('title')}" if content.get('title') else f"#{idx+1}"
+            expander_title += f" ({len(props)}개 / {content_total:,}원)"
+            
+            with st.expander(expander_title):
                 
                 # 레퍼런스 링크 표시
                 if content.get('reference'):
@@ -578,6 +586,16 @@ with tab3:
         for idx in range(len(schedule)):
             item = schedule[idx]
             
+            # 출연자 정보 미리 가져오기
+            performers_info = ""
+            if item.get('content_id'):
+                for date_contents in st.session_state.daily_contents.values():
+                    for c in date_contents:
+                        if c.get('id') == item['content_id']:
+                            if c.get('performers'):
+                                performers_info = " (" + ", ".join(c['performers']) + ")"
+                            break
+            
             # 요약 보기
             with st.container():
                 col1, col2, col3, col4 = st.columns([1.5, 1, 3, 1])
@@ -588,19 +606,7 @@ with tab3:
                     st.write(item['type'])
                 with col3:
                     # 제목과 출연자 표시
-                    display_text = f"**{item['title']}**"
-                    
-                    # 콘텐츠에서 출연자 정보 가져오기
-                    if item.get('content_id'):
-                        for date_contents in st.session_state.daily_contents.values():
-                            for c in date_contents:
-                                if c.get('id') == item['content_id']:
-                                    if c.get('performers'):
-                                        performers_str = ", ".join(c['performers'])
-                                        display_text += f"\n👥 {performers_str}"
-                                    break
-                    
-                    st.write(display_text)
+                    st.write(f"**{item['title']}**{performers_info}")
                 with col4:
                     c1, c2, c3 = st.columns(3)
                     with c1:
