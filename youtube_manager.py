@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, time, timedelta
 import json
 import requests
+import re
 
 # 페이지 설정
 st.set_page_config(
@@ -11,17 +12,64 @@ st.set_page_config(
     layout="wide"
 )
 
-# ========== GitHub Gist 설정 (자동 동기화) ==========
-# Streamlit Secrets 사용 (배포시)
+# 모바일 최적화 CSS
+st.markdown("""
+    <style>
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+        .stTimeInput > div > div {
+            width: 90px !important;
+        }
+        .row-widget.stButton {
+            width: 100%;
+        }
+    }
+    /* 유튜브 모달 스타일 */
+    .youtube-modal {
+        position: fixed;
+        z-index: 9999;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        padding: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ========== 유틸리티 함수 ==========
+def get_youtube_id(url):
+    """YouTube URL에서 비디오 ID 추출"""
+    if not url:
+        return None
+    
+    patterns = [
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?]*)',
+        r'youtube\.com\/watch\?.*v=([^&\n?]*)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+def show_youtube_player(video_id, key):
+    """YouTube 플레이어 표시"""
+    if video_id:
+        st.markdown(f"""
+            <iframe width="100%" height="315" 
+            src="https://www.youtube.com/embed/{video_id}" 
+            frameborder="0" allowfullscreen></iframe>
+        """, unsafe_allow_html=True)
+
+# ========== GitHub Gist 설정 ==========
 try:
     GITHUB_TOKEN = st.secrets["github_token"]
     GIST_ID = st.secrets["gist_id"]
 except:
-    # 로컬 테스트용 (실제 값으로 변경 필요)
-    GITHUB_TOKEN = "ghp_YOUR_GITHUB_TOKEN_HERE"  # GitHub 토큰
-    GIST_ID = "YOUR_GIST_ID_HERE"  # Gist ID
+    GITHUB_TOKEN = "ghp_YOUR_GITHUB_TOKEN_HERE"
+    GIST_ID = "YOUR_GIST_ID_HERE"
 
-# GitHub Gist 함수들
 def save_to_gist(data):
     """GitHub Gist에 자동 저장"""
     try:
@@ -63,13 +111,10 @@ def load_from_gist():
 
 # ========== 비밀번호 체크 ==========
 def check_password():
-    """비밀번호 확인"""
-    
-    # Secrets에서 비밀번호 가져오기
     try:
         PASSWORD = st.secrets["app_password"]
     except:
-        PASSWORD = "youtube1234"  # 로컬 테스트용 기본값
+        PASSWORD = "youtube1234"
     
     def password_entered():
         if st.session_state["password"] == PASSWORD:
@@ -95,7 +140,7 @@ def check_password():
             on_change=password_entered, 
             key="password"
         )
-        st.error("😕 비밀번호가 틀렸습니다")
+        st.error("비밀번호가 틀렸습니다")
         return False
     else:
         return True
@@ -103,33 +148,30 @@ def check_password():
 if not check_password():
     st.stop()
 
-# ========== 세션 초기화 (자동으로 Gist에서 불러오기) ==========
+# ========== 세션 초기화 ==========
 if 'initialized' not in st.session_state:
     st.session_state.initialized = False
 
 if not st.session_state.initialized:
-    # Gist에서 데이터 불러오기
     data = load_from_gist()
     if data:
         st.session_state.daily_contents = data.get('contents', {})
         st.session_state.content_props = data.get('props', {})
         st.session_state.schedules = data.get('schedules', {})
-        st.toast("☁️ 클라우드에서 데이터를 불러왔습니다", icon='✅')
+        st.toast("☁️ 데이터를 불러왔습니다", icon='✅')
     else:
         st.session_state.daily_contents = {}
         st.session_state.content_props = {}
         st.session_state.schedules = {}
     st.session_state.initialized = True
 
-# 자동 저장 함수
 def auto_save():
-    """변경사항을 GitHub Gist에 자동 저장"""
+    """자동 저장"""
     data = {
         'contents': st.session_state.daily_contents,
         'props': st.session_state.content_props,
         'schedules': st.session_state.schedules,
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'updated_by': st.session_state.get('user_name', 'Unknown')
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
     
     if save_to_gist(data):
@@ -137,45 +179,27 @@ def auto_save():
         return True
     return False
 
-# 데이터 새로고침
 def refresh_data():
-    """최신 데이터 불러오기"""
+    """데이터 새로고침"""
     data = load_from_gist()
     if data:
         st.session_state.daily_contents = data.get('contents', {})
         st.session_state.content_props = data.get('props', {})
         st.session_state.schedules = data.get('schedules', {})
-        st.session_state.initialized = True
-        st.toast("🔄 최신 데이터를 불러왔습니다", icon='✅')
+        st.toast("🔄 새로고침 완료", icon='✅')
         st.rerun()
 
 # ========== 메인 UI ==========
-# 헤더
-col1, col2, col3, col4 = st.columns([5, 1, 1, 1])
+col1, col2, col3 = st.columns([6, 1, 1])
 with col1:
-    st.title("🎬 유튜브 콘텐츠 통합 매니저")
+    st.title("🎬 유튜브 콘텐츠 매니저")
 with col2:
-    if st.button("🔄 새로고침"):
+    if st.button("🔄"):
         refresh_data()
 with col3:
-    if st.button("💾 저장"):
+    if st.button("💾"):
         if auto_save():
-            st.toast("☁️ 클라우드에 저장되었습니다", icon='✅')
-        else:
-            st.error("저장 실패")
-with col4:
-    # 사용자 이름 (선택사항)
-    name = st.text_input("이름", key="user_name", placeholder="홍길동", label_visibility="collapsed")
-
-# 상태 표시
-status_col1, status_col2 = st.columns([3, 1])
-with status_col1:
-    if 'last_save' in st.session_state:
-        st.caption(f"☁️ 자동 저장 ON | 마지막 저장: {st.session_state.last_save}")
-    else:
-        st.caption("☁️ 자동 저장 ON | GitHub Gist 동기화 중")
-with status_col2:
-    st.caption("💡 모든 변경사항이 자동 저장됩니다")
+            st.toast("저장 완료", icon='✅')
 
 # ========== 탭 메뉴 ==========
 tab1, tab2, tab3 = st.tabs(["📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블"])
@@ -185,20 +209,11 @@ with tab1:
     
     col1, col2, col3 = st.columns([2, 1, 2])
     with col1:
-        selected_date = st.date_input(
-            "📅 날짜 선택",
-            datetime.now(),
-            key="content_date"
-        )
+        selected_date = st.date_input("날짜 선택", datetime.now(), key="content_date")
         date_key = selected_date.strftime('%Y-%m-%d')
     
     with col2:
-        num_contents = st.number_input(
-            "콘텐츠 개수",
-            min_value=1,
-            max_value=10,
-            value=3
-        )
+        num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
     
     with col3:
         if st.button("✨ 양식 생성", type="primary"):
@@ -216,48 +231,87 @@ with tab1:
                     'final': '',
                     'reference': ''
                 })
-            auto_save()  # 자동 저장
+            auto_save()
             st.rerun()
     
     st.divider()
     
     if date_key in st.session_state.daily_contents and st.session_state.daily_contents[date_key]:
-        st.subheader(f"📋 {selected_date.strftime('%Y년 %m월 %d일')} 콘텐츠")
+        st.subheader(f"📋 {selected_date.strftime('%m월 %d일')} 콘텐츠")
         
         contents = st.session_state.daily_contents[date_key]
         
         for idx, content in enumerate(contents):
-            with st.expander(f"콘텐츠 #{idx+1} - {content.get('title', '제목 없음')}", expanded=True):
+            with st.expander(f"#{idx+1}. {content.get('title', '제목 없음')}", expanded=True):
                 
-                # 변경 감지를 위한 이전 값 저장
-                old_values = content.copy()
-                
-                col_del, col_title = st.columns([1, 5])
+                # 상단 버튼들
+                col_del, col_move, col_title = st.columns([1, 2, 3])
                 with col_del:
-                    if st.button("🗑️ 삭제", key=f"del_{date_key}_{idx}"):
+                    if st.button("🗑️", key=f"del_{date_key}_{idx}"):
                         st.session_state.daily_contents[date_key].pop(idx)
                         auto_save()
                         st.rerun()
+                
+                with col_move:
+                    # 날짜 이동
+                    move_date = st.date_input(
+                        "이동",
+                        datetime.now(),
+                        key=f"move_date_{date_key}_{idx}",
+                        label_visibility="collapsed"
+                    )
+                    if st.button("→이동", key=f"move_{date_key}_{idx}"):
+                        move_key = move_date.strftime('%Y-%m-%d')
+                        if move_key != date_key:
+                            if move_key not in st.session_state.daily_contents:
+                                st.session_state.daily_contents[move_key] = []
+                            st.session_state.daily_contents[move_key].append(content)
+                            st.session_state.daily_contents[date_key].pop(idx)
+                            auto_save()
+                            st.success(f"{move_date.strftime('%m/%d')}로 이동됨")
+                            st.rerun()
                 
                 with col_title:
                     content['title'] = st.text_input(
                         "제목",
                         value=content.get('title', ''),
                         key=f"{date_key}_title_{idx}",
-                        placeholder="콘텐츠 제목 입력"
+                        placeholder="제목 입력",
+                        label_visibility="collapsed"
                     )
                 
-                content['reference'] = st.text_input(
-                    "📎 레퍼런스 링크",
-                    value=content.get('reference', ''),
-                    key=f"{date_key}_ref_{idx}",
-                    placeholder="YouTube 링크 입력"
-                )
+                # 레퍼런스 링크
+                col_ref, col_watch = st.columns([4, 1])
+                with col_ref:
+                    content['reference'] = st.text_input(
+                        "링크",
+                        value=content.get('reference', ''),
+                        key=f"{date_key}_ref_{idx}",
+                        placeholder="YouTube 링크",
+                        label_visibility="collapsed"
+                    )
+                with col_watch:
+                    if content.get('reference'):
+                        if st.button("▶️", key=f"watch_{date_key}_{idx}"):
+                            st.session_state[f"show_video_{date_key}_{idx}"] = True
                 
+                # 유튜브 플레이어
+                if st.session_state.get(f"show_video_{date_key}_{idx}"):
+                    video_id = get_youtube_id(content['reference'])
+                    if video_id:
+                        col_video, col_close = st.columns([10, 1])
+                        with col_video:
+                            show_youtube_player(video_id, f"player_{date_key}_{idx}")
+                        with col_close:
+                            if st.button("✕", key=f"close_{date_key}_{idx}"):
+                                st.session_state[f"show_video_{date_key}_{idx}"] = False
+                                st.rerun()
+                
+                # 4단계 프로세스
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.markdown("**1️⃣ 초안**")
+                    st.markdown("**초안**")
                     content['draft'] = st.text_area(
                         "초안",
                         value=content.get('draft', ''),
@@ -267,7 +321,7 @@ with tab1:
                     )
                 
                 with col2:
-                    st.markdown("**2️⃣ 목사님 피드백**")
+                    st.markdown("**피드백**")
                     content['feedback'] = st.text_area(
                         "피드백",
                         value=content.get('feedback', ''),
@@ -277,9 +331,9 @@ with tab1:
                     )
                 
                 with col3:
-                    st.markdown("**3️⃣ 추가 의견**")
+                    st.markdown("**추가의견**")
                     content['revision'] = st.text_area(
-                        "추가의견",
+                        "추가",
                         value=content.get('revision', ''),
                         height=120,
                         key=f"{date_key}_revision_{idx}",
@@ -287,7 +341,7 @@ with tab1:
                     )
                 
                 with col4:
-                    st.markdown("**4️⃣ 최종 픽스**")
+                    st.markdown("**최종**")
                     content['final'] = st.text_area(
                         "최종",
                         value=content.get('final', ''),
@@ -296,324 +350,290 @@ with tab1:
                         label_visibility="collapsed"
                     )
                 
-                # 값이 변경되면 자동 저장
-                if old_values != content:
-                    auto_save()
-                
                 progress = sum([25 for field in ['draft', 'feedback', 'revision', 'final'] if content.get(field)])
-                st.progress(progress / 100, text=f"진행률: {progress}%")
-    else:
-        st.info("👆 '양식 생성' 버튼을 클릭하여 콘텐츠를 추가하세요.")
+                st.progress(progress / 100)
 
 with tab2:
-    st.subheader("🛍️ 소품 구매 관리")
+    st.subheader("🛍️ 소품 구매")
     
-    # 날짜 선택
-    prop_date = st.date_input("📅 날짜 선택", datetime.now(), key="prop_date")
+    prop_date = st.date_input("날짜", datetime.now(), key="prop_date")
     prop_date_key = prop_date.strftime('%Y-%m-%d')
     
-    # 해당 날짜의 콘텐츠 가져오기
     if prop_date_key in st.session_state.daily_contents and st.session_state.daily_contents[prop_date_key]:
         contents = st.session_state.daily_contents[prop_date_key]
         
-        st.markdown(f"### 📋 {prop_date.strftime('%Y년 %m월 %d일')} 콘텐츠별 소품")
+        total_props = 0
         
-        # 전체 통계
-        total_all_props = 0
-        total_all_completed = 0
-        
-        # 모든 콘텐츠를 토글로 표시
         for idx, content in enumerate(contents):
             content_id = content.get('id', f"{prop_date_key}_{idx}")
             
-            # 소품 초기화
             if content_id not in st.session_state.content_props:
                 st.session_state.content_props[content_id] = []
             
             props = st.session_state.content_props[content_id]
-            
-            # 콘텐츠별 통계
             content_total = sum(p['price'] for p in props)
-            content_completed = len([p for p in props if p['status'] == '수령완료'])
+            total_props += content_total
             
-            total_all_props += content_total
-            total_all_completed += content_completed
-            
-            # 토글 expander로 각 콘텐츠 표시
-            with st.expander(
-                f"📦 #{idx+1}. {content.get('title', '제목 없음')} "
-                f"({len(props)}개 소품 / {content_total:,}원)",
-                expanded=False
-            ):
-                # 소품 추가 섹션
-                st.markdown("**➕ 새 소품 추가**")
+            with st.expander(f"#{idx+1}. {content.get('title', '제목 없음')} ({len(props)}개 / {content_total:,}원)"):
+                
+                # 레퍼런스 링크 표시
+                if content.get('reference'):
+                    col_ref, col_btn = st.columns([5, 1])
+                    with col_ref:
+                        st.caption(f"📎 {content['reference'][:50]}...")
+                    with col_btn:
+                        if st.button("▶️", key=f"prop_watch_{content_id}"):
+                            st.session_state[f"show_prop_video_{content_id}"] = True
+                    
+                    if st.session_state.get(f"show_prop_video_{content_id}"):
+                        video_id = get_youtube_id(content['reference'])
+                        if video_id:
+                            show_youtube_player(video_id, f"prop_player_{content_id}")
+                            if st.button("✕ 닫기", key=f"close_prop_{content_id}"):
+                                st.session_state[f"show_prop_video_{content_id}"] = False
+                                st.rerun()
+                
+                # 소품 추가
+                st.markdown("**➕ 추가**")
                 col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
                 
                 with col1:
-                    new_prop_name = st.text_input("소품명", key=f"new_name_{content_id}", placeholder="소품명")
+                    new_name = st.text_input("소품", key=f"new_n_{content_id}")
                 with col2:
-                    new_vendor = st.selectbox("구매처", ["쿠팡", "네이버", "다이소", "오프라인", "기타"], 
-                                             key=f"new_vendor_{content_id}")
+                    new_vendor = st.selectbox("구매처", 
+                        ["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"],
+                        key=f"new_v_{content_id}")
                 with col3:
-                    new_price = st.number_input("금액", min_value=0, step=1000, 
-                                               key=f"new_price_{content_id}")
+                    new_price = st.number_input("금액", 0, step=1000, key=f"new_p_{content_id}")
                 with col4:
-                    new_status = st.selectbox("상태", ["예정", "주문완료", "배송중", "수령완료"],
-                                             key=f"new_status_{content_id}")
+                    new_status = st.selectbox("상태",
+                        ["예정", "주문완료", "배송중", "수령완료"],
+                        key=f"new_s_{content_id}")
                 with col5:
-                    if st.button("추가", key=f"add_{content_id}", type="primary"):
-                        if new_prop_name:
+                    if st.button("+", key=f"add_{content_id}", type="primary"):
+                        if new_name:
                             props.append({
-                                'name': new_prop_name,
+                                'name': new_name,
                                 'vendor': new_vendor,
                                 'price': new_price,
                                 'status': new_status
                             })
-                            st.session_state.content_props[content_id] = props
                             auto_save()
                             st.rerun()
                 
-                st.divider()
-                
-                # 소품 목록
+                # 소품 목록 (수정 가능)
                 if props:
-                    st.markdown("**📦 소품 목록**")
-                    for prop_idx, prop in enumerate(props):
+                    st.divider()
+                    for p_idx, prop in enumerate(props):
                         col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
                         
                         with col1:
-                            st.text_input("이름", value=prop['name'], 
-                                        key=f"prop_name_{content_id}_{prop_idx}", 
-                                        label_visibility="collapsed",
-                                        disabled=True)
+                            prop['name'] = st.text_input("", value=prop['name'],
+                                key=f"pn_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col2:
-                            st.text_input("구매처", value=prop['vendor'],
-                                        key=f"prop_vendor_{content_id}_{prop_idx}", 
-                                        label_visibility="collapsed",
-                                        disabled=True)
+                            prop['vendor'] = st.selectbox("", 
+                                ["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"],
+                                index=["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"].index(prop.get('vendor', '기타')),
+                                key=f"pv_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col3:
-                            st.text_input("금액", value=f"{prop['price']:,}원",
-                                        key=f"prop_price_{content_id}_{prop_idx}", 
-                                        label_visibility="collapsed",
-                                        disabled=True)
+                            prop['price'] = st.number_input("", value=prop['price'],
+                                key=f"pp_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col4:
-                            status_emoji = {"예정": "🔵", "주문완료": "🟡", "배송중": "🟠", "수령완료": "🟢"}
-                            st.text_input("상태", 
-                                        value=f"{status_emoji.get(prop['status'], '')} {prop['status']}",
-                                        key=f"prop_status_{content_id}_{prop_idx}", 
-                                        label_visibility="collapsed",
-                                        disabled=True)
+                            prop['status'] = st.selectbox("",
+                                ["예정", "주문완료", "배송중", "수령완료"],
+                                index=["예정", "주문완료", "배송중", "수령완료"].index(prop['status']),
+                                key=f"ps_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col5:
-                            if st.button("🗑️", key=f"del_prop_{content_id}_{prop_idx}"):
-                                props.pop(prop_idx)
-                                st.session_state.content_props[content_id] = props
+                            if st.button("🗑️", key=f"d_{content_id}_{p_idx}"):
+                                props.pop(p_idx)
                                 auto_save()
                                 st.rerun()
                     
-                    # 콘텐츠별 소계
-                    st.info(f"**소계: {len(props)}개 | 완료: {content_completed}개 | {content_total:,}원**")
-                else:
-                    st.write("아직 등록된 소품이 없습니다.")
+                    # 자동 저장
+                    if st.button("💾 저장", key=f"save_{content_id}"):
+                        auto_save()
+                        st.success("저장됨")
         
-        # 전체 통계 표시
+        # 전체 소품 요약 테이블
         st.divider()
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("전체 콘텐츠", f"{len(contents)}개")
-        with col2:
-            st.metric("전체 소품 수", f"{sum(len(st.session_state.content_props.get(c.get('id', f'{prop_date_key}_{i}'), [])) for i, c in enumerate(contents))}개")
-        with col3:
-            st.metric("총 구매 금액", f"{total_all_props:,}원")
+        st.subheader("📊 전체 소품 현황")
         
+        summary_data = []
+        for idx, content in enumerate(contents):
+            content_id = content.get('id', f"{prop_date_key}_{idx}")
+            if content_id in st.session_state.content_props:
+                props = st.session_state.content_props[content_id]
+                if props:
+                    props_summary = []
+                    for p in props:
+                        status = {"예정":"🔵", "주문완료":"🟡", "배송중":"🟠", "수령완료":"🟢"}.get(p['status'], '')
+                        props_summary.append(f"{p['name']}{status}")
+                    summary_data.append({
+                        '콘텐츠': content.get('title', f'#{idx+1}'),
+                        '소품': ', '.join(props_summary),
+                        '금액': f"{sum(p['price'] for p in props):,}원"
+                    })
+        
+        if summary_data:
+            df = pd.DataFrame(summary_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.metric("총 금액", f"{total_props:,}원")
     else:
-        st.warning(f"⚠️ {prop_date.strftime('%Y년 %m월 %d일')}에 생성된 콘텐츠가 없습니다.")
+        st.warning("이 날짜에 콘텐츠가 없습니다")
 
 with tab3:
     st.subheader("⏰ 타임테이블")
     
-    # 날짜 선택
-    schedule_date = st.date_input("📅 날짜 선택", datetime.now(), key="schedule_date")
+    schedule_date = st.date_input("날짜", datetime.now(), key="schedule_date")
     schedule_date_key = schedule_date.strftime('%Y-%m-%d')
     
-    # 스케줄 초기화
     if schedule_date_key not in st.session_state.schedules:
         st.session_state.schedules[schedule_date_key] = []
     
     schedule = st.session_state.schedules[schedule_date_key]
     
-    st.markdown(f"### 📅 {schedule_date.strftime('%Y년 %m월 %d일')} 일정")
-    
-    # 일정 추가 섹션
-    with st.expander("➕ 새 일정 추가", expanded=False):
-        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+    # 새 일정 추가
+    with st.expander("➕ 일정 추가", expanded=False):
+        col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 2, 1])
         
         with col1:
-            new_start = st.time_input("시작 시간", time(12, 0), key="new_start")
+            new_start = st.time_input("시작", time(12, 0), key="new_start")
         with col2:
-            new_end = st.time_input("종료 시간", time(13, 0), key="new_end")
+            new_end = st.time_input("종료", time(13, 0), key="new_end")
         with col3:
-            schedule_type = st.selectbox("유형", ["🎬 촬영", "🍽️ 식사", "☕ 휴식", "📝 회의", "🚗 이동", "🎯 기타"], key="new_type")
+            types = ["🎬촬영", "🍽️식사", "☕휴식", "📝회의", "🚗이동", "🎯기타"]
+            new_type = st.selectbox("유형", types, key="new_type")
         with col4:
-            new_title = st.text_input("일정 제목", key="new_title", placeholder="일정 내용")
+            new_title = st.text_input("제목", key="new_title")
         with col5:
             if st.button("추가", type="primary"):
                 if new_title:
-                    schedule.append({
+                    new_item = {
                         'start': new_start.strftime('%H:%M'),
                         'end': new_end.strftime('%H:%M'),
-                        'type': schedule_type,
+                        'type': new_type,
                         'title': new_title,
                         'content_id': None,
                         'details': ''
-                    })
+                    }
+                    schedule.append(new_item)
+                    # 시간순 정렬
+                    schedule.sort(key=lambda x: x['start'])
                     st.session_state.schedules[schedule_date_key] = schedule
                     auto_save()
                     st.rerun()
     
-    # 콘텐츠 빠른 추가
-    if schedule_date_key in st.session_state.daily_contents and st.session_state.daily_contents[schedule_date_key]:
-        contents = st.session_state.daily_contents[schedule_date_key]
-        
-        with st.expander("📺 콘텐츠 일괄 추가", expanded=False):
-            st.write("기획된 콘텐츠를 타임테이블에 추가:")
-            
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                default_start_time = st.time_input("시작 시간", time(12, 40), key="batch_start")
-            with col2:
-                default_duration = st.selectbox("기본 촬영 시간", ["50분", "1시간", "1시간 30분"], key="batch_duration")
-            
-            duration_map = {"50분": 50, "1시간": 60, "1시간 30분": 90}
-            
-            if st.button("콘텐츠 전체 추가", key="add_all_contents"):
-                current = datetime.combine(schedule_date, default_start_time)
-                
-                for content in contents:
-                    if content.get('title'):
-                        end = current + timedelta(minutes=duration_map[default_duration])
-                        schedule.append({
-                            'start': current.strftime('%H:%M'),
-                            'end': end.strftime('%H:%M'),
-                            'type': '🎬 촬영',
-                            'title': content['title'],
-                            'content_id': content.get('id'),
-                            'details': content.get('final', '')[:100] if content.get('final') else ''
-                        })
-                        current = end + timedelta(minutes=10)  # 10분 휴식
-                
-                st.session_state.schedules[schedule_date_key] = schedule
-                auto_save()
-                st.rerun()
+    # 콘텐츠 일괄 추가
+    if schedule_date_key in st.session_state.daily_contents:
+        contents = st.session_state.daily_contents.get(schedule_date_key, [])
+        if contents:
+            with st.expander("📺 콘텐츠 일괄 추가"):
+                col1, col2, col3 = st.columns([2, 2, 1])
+                with col1:
+                    batch_start = st.time_input("시작", time(12, 40), key="batch_start")
+                with col2:
+                    batch_dur = st.selectbox("시간", ["50분", "1시간", "1시간 30분"], key="batch_dur")
+                with col3:
+                    if st.button("일괄추가"):
+                        dur_map = {"50분": 50, "1시간": 60, "1시간 30분": 90}
+                        current = datetime.combine(schedule_date, batch_start)
+                        
+                        for c in contents:
+                            if c.get('title'):
+                                end = current + timedelta(minutes=dur_map[batch_dur])
+                                schedule.append({
+                                    'start': current.strftime('%H:%M'),
+                                    'end': end.strftime('%H:%M'),
+                                    'type': '🎬촬영',
+                                    'title': c['title'],
+                                    'content_id': c.get('id'),
+                                    'details': ''
+                                })
+                                current = end + timedelta(minutes=10)
+                        
+                        schedule.sort(key=lambda x: x['start'])
+                        st.session_state.schedules[schedule_date_key] = schedule
+                        auto_save()
+                        st.rerun()
     
-    # 타임테이블 표시 및 수정
+    # 일정 목록
     if schedule:
         st.markdown("### 📋 일정 목록")
         
-        # 시간순 정렬
-        schedule.sort(key=lambda x: x['start'])
-        
-        for idx, item in enumerate(schedule):
+        for idx in range(len(schedule)):
+            item = schedule[idx]
+            
+            # 요약 보기
             with st.container():
-                col1, col2, col3, col4, col5, col6 = st.columns([2, 2, 1, 3, 3, 1])
+                col1, col2, col3, col4 = st.columns([1.5, 1, 3, 1])
                 
                 with col1:
-                    # 시간 수정 가능
-                    start_time = st.time_input(
-                        "시작",
-                        datetime.strptime(item['start'], '%H:%M').time(),
-                        key=f"start_{idx}",
-                        label_visibility="collapsed"
-                    )
-                    item['start'] = start_time.strftime('%H:%M')
-                
+                    st.write(f"**{item['start']} - {item['end']}**")
                 with col2:
-                    # 종료 시간 수정 가능
-                    end_time = st.time_input(
-                        "종료",
-                        datetime.strptime(item['end'], '%H:%M').time(),
-                        key=f"end_{idx}",
-                        label_visibility="collapsed"
-                    )
-                    item['end'] = end_time.strftime('%H:%M')
-                
-                with col3:
                     st.write(item['type'])
-                
+                with col3:
+                    st.write(f"**{item['title']}**")
                 with col4:
-                    # 제목 수정 가능
-                    item['title'] = st.text_input(
-                        "제목",
-                        value=item['title'],
-                        key=f"title_{idx}",
-                        label_visibility="collapsed"
-                    )
-                
-                with col5:
-                    # 상세 내용 또는 소품 정보
-                    if item.get('content_id') and item['content_id'] in st.session_state.content_props:
-                        props = st.session_state.content_props[item['content_id']]
-                        completed_props = [p for p in props if p['status'] == '수령완료']
-                        if completed_props:
-                            st.success(f"✅ 소품 {len(completed_props)}개 준비")
-                    
-                    # 메모 추가
-                    item['details'] = st.text_input(
-                        "메모",
-                        value=item.get('details', ''),
-                        key=f"details_{idx}",
-                        placeholder="메모",
-                        label_visibility="collapsed"
-                    )
-                
-                with col6:
-                    col_up, col_down, col_del = st.columns(3)
-                    with col_up:
-                        if st.button("↑", key=f"up_{idx}", help="위로"):
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        if st.button("↑", key=f"up_{idx}"):
                             if idx > 0:
                                 schedule[idx], schedule[idx-1] = schedule[idx-1], schedule[idx]
-                                st.session_state.schedules[schedule_date_key] = schedule
                                 auto_save()
                                 st.rerun()
-                    with col_down:
-                        if st.button("↓", key=f"down_{idx}", help="아래로"):
+                    with c2:
+                        if st.button("↓", key=f"down_{idx}"):
                             if idx < len(schedule) - 1:
                                 schedule[idx], schedule[idx+1] = schedule[idx+1], schedule[idx]
-                                st.session_state.schedules[schedule_date_key] = schedule
                                 auto_save()
                                 st.rerun()
-                    with col_del:
-                        if st.button("🗑️", key=f"del_schedule_{idx}"):
+                    with c3:
+                        if st.button("🗑️", key=f"del_{idx}"):
                             schedule.pop(idx)
-                            st.session_state.schedules[schedule_date_key] = schedule
                             auto_save()
                             st.rerun()
+            
+            # 상세 보기 (토글)
+            with st.expander("상세보기"):
+                # 콘텐츠 정보 표시
+                if item.get('content_id'):
+                    # 레퍼런스 링크
+                    for date_contents in st.session_state.daily_contents.values():
+                        for c in date_contents:
+                            if c.get('id') == item['content_id']:
+                                if c.get('reference'):
+                                    col_r, col_b = st.columns([5, 1])
+                                    with col_r:
+                                        st.caption(f"📎 {c['reference'][:50]}...")
+                                    with col_b:
+                                        if st.button("▶️", key=f"tv_{idx}"):
+                                            video_id = get_youtube_id(c['reference'])
+                                            if video_id:
+                                                show_youtube_player(video_id, f"tp_{idx}")
+                                
+                                # 픽스 내용
+                                if c.get('final'):
+                                    st.text_area("최종 픽스", c['final'], disabled=True, key=f"f_{idx}")
+                                
+                                break
+                    
+                    # 소품 정보
+                    if item['content_id'] in st.session_state.content_props:
+                        props = st.session_state.content_props[item['content_id']]
+                        if props:
+                            props_list = []
+                            for p in props:
+                                emoji = {"예정":"🔵", "주문완료":"🟡", "배송중":"🟠", "수령완료":"🟢"}.get(p['status'])
+                                props_list.append(f"{p['name']}{emoji}")
+                            st.success("소품: " + ", ".join(props_list))
                 
-                st.divider()
+                # 메모
+                item['details'] = st.text_area("메모", value=item.get('details', ''), key=f"memo_{idx}")
         
-        # 저장 버튼
-        if st.button("💾 타임테이블 저장", type="primary", key="save_schedule"):
-            st.session_state.schedules[schedule_date_key] = schedule
+        if st.button("💾 타임테이블 저장", type="primary"):
             auto_save()
-            st.success("타임테이블이 저장되었습니다!")
+            st.success("저장됨")
         
-        # 전체 시간 요약
+        # 전체 시간
         if schedule:
-            first_start = min(schedule, key=lambda x: x['start'])['start']
-            last_end = max(schedule, key=lambda x: x['end'])['end']
-            st.info(f"📌 **전체 일정**: {first_start} ~ {last_end}")
-    else:
-        st.info("일정이 없습니다. 위에서 새 일정을 추가하세요.")
-
-# 사이드바
-with st.sidebar:
-    st.header("💾 상태")
-    
-    # 마지막 저장 시간
-    if 'last_save' in st.session_state:
-        st.caption(f"마지막 저장: {st.session_state.last_save}")
-    
-    # 현재 사용자 수 (더미 데이터)
-    st.metric("🟢 온라인", "3명")
-    
-    st.divider()
-    st.caption("💡 Tip: 모든 변경사항은 자동 저장됩니다")
+            st.info(f"📌 전체: {schedule[0]['start']} ~ {schedule[-1]['end']}")
