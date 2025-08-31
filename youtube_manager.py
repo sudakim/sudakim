@@ -427,7 +427,7 @@ with tab2:
                     new_name = st.text_input("소품", key=f"new_n_{content_id}")
                 with col2:
                     new_vendor = st.selectbox("구매처", 
-                        ["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"],
+                        ["쿠팡", "다이소", "세계과자", "개인(다혜)", "개인(예람)", "개인(수빈)", "테무", "알리", "마트", "기타"],
                         key=f"new_v_{content_id}")
                 with col3:
                     new_quantity = st.number_input("개수", 1, step=1, key=f"new_q_{content_id}")
@@ -457,9 +457,13 @@ with tab2:
                             prop['name'] = st.text_input("", value=prop['name'],
                                 key=f"pn_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col2:
+                            vendor_list = ["쿠팡", "다이소", "세계과자", "개인(다혜)", "개인(예람)", "개인(수빈)", "테무", "알리", "마트", "기타"]
+                            current_vendor = prop.get('vendor', '기타')
+                            if current_vendor not in vendor_list:
+                                current_vendor = '기타'
                             prop['vendor'] = st.selectbox("", 
-                                ["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"],
-                                index=["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"].index(prop.get('vendor', '기타')),
+                                vendor_list,
+                                index=vendor_list.index(current_vendor),
                                 key=f"pv_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col3:
                              prop['quantity'] = st.number_input("", value=prop.get('quantity', 1),
@@ -674,6 +678,7 @@ with tab3:
         # 전체 시간
         if schedule:
             st.info(f"📌 전체: {schedule[0]['start']} ~ {schedule[-1]['end']}")
+
 
 
 
