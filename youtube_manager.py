@@ -722,66 +722,66 @@ with tab4:
         filtered_contents = [c for c in filtered_contents 
                             if filter_date_from.strftime('%Y-%m-%d') <= c['date'] <= filter_date_to.strftime('%Y-%m-%d')]
         
-        # 테이블 형식으로 표시
+        # 테이블 형식으로 표시 - 컴팩트 버전
         st.markdown("### 📊 전체 콘텐츠 현황")
         
         for content in filtered_contents:
-            with st.container():
-                col1, col2, col3, col4, col5, col6 = st.columns([1.5, 3, 2, 2, 2, 1])
-                
-                with col1:
-                    st.write(f"**{content['date']}**")
-                
-                with col2:
-                    st.write(content.get('title', '제목 없음'))
-                    if content.get('performers'):
-                        st.caption(", ".join(content['performers']))
-                
-                with col3:
-                    # 상태 선택
-                    status_options = ["촬영전", "촬영완료", "편집완료", "업로드완료"]
-                    current_status = st.session_state.upload_status.get(content['id'], '촬영전')
-                    new_status = st.selectbox(
-                        "",
-                        status_options,
-                        index=status_options.index(current_status),
-                        key=f"status_{content['id']}",
-                        label_visibility="collapsed"
-                    )
-                    if new_status != current_status:
-                        st.session_state.upload_status[content['id']] = new_status
-                        auto_save()
-                
-                with col4:
-                    # 상태별 색상 표시
-                    status_color = {
-                        "촬영전": "🔵",
-                        "촬영완료": "🟡",
-                        "편집완료": "🟠",
-                        "업로드완료": "🟢"
-                    }
-                    st.write(f"{status_color.get(new_status, '')} {new_status}")
-                
-                with col5:
-                    # 날짜 이동
-                    new_date = st.date_input(
-                        "",
-                        datetime.strptime(content['date'], '%Y-%m-%d'),
-                        key=f"move_upload_{content['id']}",
-                        label_visibility="collapsed"
-                    )
+            col1, col2, col3, col4, col5 = st.columns([1, 2.5, 1.5, 1.5, 0.5])
+            
+            with col1:
+                st.write(content['date'][5:])  # MM-DD 형식만
+            
+            with col2:
+                title_text = content.get('title', '제목 없음')
+                if content.get('performers'):
+                    title_text += f" ({', '.join(content['performers'])})"
+                st.write(title_text)
+            
+            with col3:
+                # 상태 선택
+                status_options = ["촬영전", "촬영완료", "편집완료", "업로드완료"]
+                current_status = st.session_state.upload_status.get(content['id'], '촬영전')
+                status_emoji = {"촬영전": "🔵", "촬영완료": "🟡", "편집완료": "🟠", "업로드완료": "🟢"}
+                new_status = st.selectbox(
+                    "",
+                    status_options,
+                    index=status_options.index(current_status),
+                    key=f"status_{content['id']}",
+                    label_visibility="collapsed",
+                    format_func=lambda x: f"{status_emoji.get(x, '')} {x}"
+                )
+                if new_status != current_status:
+                    st.session_state.upload_status[content['id']] = new_status
+                    auto_save()
+            
+            with col4:
+                # 날짜 이동
+                new_date = st.date_input(
+                    "",
+                    datetime.strptime(content['date'], '%Y-%m-%d'),
+                    key=f"move_upload_{content['id']}",
+                    label_visibility="collapsed"
+                )
+            
+            with col5:
+                # 작업 버튼
+                if st.button("⚙️", key=f"action_{content['id']}", help="이동/삭제"):
+                    st.session_state[f"show_action_{content['id']}"] = not st.session_state.get(f"show_action_{content['id']}", False)
+            
+            # 작업 메뉴 (토글)
+            if st.session_state.get(f"show_action_{content['id']}", False):
+                col_a, col_b = st.columns(2)
+                with col_a:
                     if st.button("이동", key=f"move_btn_{content['id']}"):
                         old_date = content['date']
                         new_date_key = new_date.strftime('%Y-%m-%d')
                         
                         if old_date != new_date_key:
-                            # 기존 날짜에서 제거
                             for idx, c in enumerate(st.session_state.daily_contents[old_date]):
                                 if c['id'] == content['id']:
                                     moved_content = st.session_state.daily_contents[old_date].pop(idx)
                                     break
                             
-                            # 새 날짜에 추가
                             if new_date_key not in st.session_state.daily_contents:
                                 st.session_state.daily_contents[new_date_key] = []
                             st.session_state.daily_contents[new_date_key].append(moved_content)
@@ -790,16 +790,13 @@ with tab4:
                             st.success(f"{new_date_key}로 이동됨")
                             st.rerun()
                 
-                with col6:
-                    if st.button("🗑️", key=f"del_upload_{content['id']}"):
-                        # 콘텐츠 삭제
+                with col_b:
+                    if st.button("🗑️ 삭제", key=f"del_upload_{content['id']}"):
                         for idx, c in enumerate(st.session_state.daily_contents[content['date']]):
                             if c['id'] == content['id']:
                                 st.session_state.daily_contents[content['date']].pop(idx)
-                                # 빈 날짜 제거
                                 if not st.session_state.daily_contents[content['date']]:
                                     del st.session_state.daily_contents[content['date']]
-                                # 관련 데이터도 삭제
                                 if content['id'] in st.session_state.upload_status:
                                     del st.session_state.upload_status[content['id']]
                                 if content['id'] in st.session_state.content_props:
@@ -807,11 +804,9 @@ with tab4:
                                 break
                         auto_save()
                         st.rerun()
-                
-                st.divider()
         
         # 통계
-        st.markdown("### 📈 업로드 통계")
+        st.divider()
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
