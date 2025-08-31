@@ -724,7 +724,27 @@ with tab4:
         
         # 테이블 형식으로 표시
         st.markdown("### 📊 전체 콘텐츠 현황")
+
+        # 테이블 헤더 추가
+        col1, col2, col3, col4, col5, col6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
+        with col1:
+            st.markdown("**날짜**")
+        with col2:
+            st.markdown("**제목**")
+        with col3:
+            st.markdown("**상태**")
+        with col4:
+            st.markdown("**이동일**")
+        with col5:
+            st.markdown("")
+        with col6:
+            st.markdown("")
         
+        st.divider()
+        
+        for content in filtered_contents:
+            col1, col2, col3, col4, col5, col6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
+            
         for content in filtered_contents:
             col1, col2, col3, col4, col5, col6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
             
@@ -811,4 +831,5 @@ with tab4:
             st.metric("업로드완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
 
