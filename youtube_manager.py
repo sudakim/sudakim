@@ -438,7 +438,7 @@ with tab2:
                 with col5:
                     if st.button("추가", key=f"add_{content_id}", type="primary"):
                         if new_name:
-                           props.append({
+                            props.append({
                                 'name': new_name,
                                 'vendor': new_vendor,
                                 'quantity': new_quantity,
@@ -674,4 +674,5 @@ with tab3:
         # 전체 시간
         if schedule:
             st.info(f"📌 전체: {schedule[0]['start']} ~ {schedule[-1]['end']}")
+
 
