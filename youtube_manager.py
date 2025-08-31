@@ -27,7 +27,6 @@ st.markdown("""
             padding: 0.25rem 0.5rem !important;
             font-size: 0.9rem !important;
         }
-        /* expander 패딩 축소 */
         .streamlit-expanderHeader {
             padding: 0.5rem !important;
         }
@@ -36,9 +35,18 @@ st.markdown("""
     div[data-testid="column"] > div {
         padding: 0 2px;
     }
+    /* 영상 업로드 탭 공백 제거 */
+    [data-testid="stVerticalBlock"] > [style*="gap"] {
+        gap: 0.5rem !important;
+    }
+    .element-container {
+        margin-bottom: 0.5rem !important;
+    }
+    hr {
+        margin: 0.5rem 0 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
-
 # ========== 유틸리티 함수 ==========
 def get_youtube_id(url):
     """YouTube URL에서 비디오 ID 추출"""
@@ -832,6 +840,7 @@ with tab4:
             st.metric("업로드완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
 
 
 
