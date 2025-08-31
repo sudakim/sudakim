@@ -743,7 +743,7 @@ with tab4:
             with col3:
                 st.caption("**상태**")
             with col4:
-                st.caption("**이동일**")
+                st.caption("**이동날짜선택**")
             with col5:
                 st.caption("")
             with col6:
@@ -838,6 +838,7 @@ with tab4:
             st.metric("업로드완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
 
 
 
