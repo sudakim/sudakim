@@ -393,12 +393,12 @@ with tab2:
                 st.session_state.content_props[content_id] = []
             
             props = st.session_state.content_props[content_id]
-            content_total = sum(p['price'] for p in props)
+            total_quantity = sum(p.get('quantity', 1) for p in props)
             total_props += content_total
             
             # 제목이 있으면 제목 표시, 없으면 번호만 표시
             expander_title = f"#{idx+1}. {content.get('title')}" if content.get('title') else f"#{idx+1}"
-            expander_title += f" ({len(props)}개 / {content_total:,}원)"
+            expander_title += f" ({len(props)}종 / 총 {total_quantity}개)"
             
             with st.expander(expander_title):
                 
@@ -430,7 +430,7 @@ with tab2:
                         ["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"],
                         key=f"new_v_{content_id}")
                 with col3:
-                    new_price = st.number_input("금액", 0, step=1000, key=f"new_p_{content_id}")
+                    new_quantity = st.number_input("개수", 1, step=1, key=f"new_q_{content_id}")
                 with col4:
                     new_status = st.selectbox("상태",
                         ["예정", "주문완료", "배송중", "수령완료"],
@@ -438,10 +438,10 @@ with tab2:
                 with col5:
                     if st.button("추가", key=f"add_{content_id}", type="primary"):
                         if new_name:
-                            props.append({
+                           props.append({
                                 'name': new_name,
                                 'vendor': new_vendor,
-                                'price': new_price,
+                                'quantity': new_quantity,
                                 'status': new_status
                             })
                             auto_save()
@@ -462,8 +462,8 @@ with tab2:
                                 index=["쿠팡", "네이버", "다이소", "오프라인", "개인준비", "기타"].index(prop.get('vendor', '기타')),
                                 key=f"pv_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col3:
-                            prop['price'] = st.number_input("", value=prop['price'],
-                                key=f"pp_{content_id}_{p_idx}", label_visibility="collapsed")
+                             prop['quantity'] = st.number_input("", value=prop.get('quantity', 1),
+                                min_value=1, key=f"pq_{content_id}_{p_idx}", label_visibility="collapsed")
                         with col4:
                             prop['status'] = st.selectbox("",
                                 ["예정", "주문완료", "배송중", "수령완료"],
@@ -497,7 +497,7 @@ with tab2:
                     summary_data.append({
                         '콘텐츠': content.get('title', f'#{idx+1}'),
                         '소품': ', '.join(props_summary),
-                        '금액': f"{sum(p['price'] for p in props):,}원"
+                        '개수': f"{sum(p.get('quantity', 1) for p in props)}개"
                     })
         
         if summary_data:
@@ -674,3 +674,4 @@ with tab3:
         # 전체 시간
         if schedule:
             st.info(f"📌 전체: {schedule[0]['start']} ~ {schedule[-1]['end']}")
+
