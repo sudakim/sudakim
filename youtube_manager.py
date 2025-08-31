@@ -394,7 +394,7 @@ with tab2:
             
             props = st.session_state.content_props[content_id]
             total_quantity = sum(p.get('quantity', 1) for p in props)
-            total_props += content_total
+            total_props += total_quantity
             
             # 제목이 있으면 제목 표시, 없으면 번호만 표시
             expander_title = f"#{idx+1}. {content.get('title')}" if content.get('title') else f"#{idx+1}"
@@ -493,17 +493,17 @@ with tab2:
                     props_summary = []
                     for p in props:
                         status = {"예정":"🔵", "주문완료":"🟡", "배송중":"🟠", "수령완료":"🟢"}.get(p['status'], '')
-                        props_summary.append(f"{p['name']}{status}")
+                        props_summary.append(f"{p['name']}{status}({p.get('quantity', 1)}개)")
                     summary_data.append({
                         '콘텐츠': content.get('title', f'#{idx+1}'),
                         '소품': ', '.join(props_summary),
-                        '개수': f"{sum(p.get('quantity', 1) for p in props)}개"
+                        '총개수': f"{sum(p.get('quantity', 1) for p in props)}개"
                     })
         
         if summary_data:
             df = pd.DataFrame(summary_data)
             st.dataframe(df, use_container_width=True, hide_index=True)
-            st.metric("총 금액", f"{total_props:,}원")
+            st.metric("전체 개수", f"{total_props}개")  # ← 이 줄 수정
     else:
         st.warning("이 날짜에 콘텐츠가 없습니다")
 
@@ -674,5 +674,6 @@ with tab3:
         # 전체 시간
         if schedule:
             st.info(f"📌 전체: {schedule[0]['start']} ~ {schedule[-1]['end']}")
+
 
 
