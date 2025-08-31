@@ -750,8 +750,6 @@ with tab4:
             with col6:
                 st.caption("")
             
-            for content in filtered_contents:
-                # 콘텐츠 표시 코드...
         else:
             st.info("필터 조건에 맞는 콘텐츠가 없습니다.")
            
@@ -844,6 +842,7 @@ with tab4:
             st.metric("업로드완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
 
 
 
