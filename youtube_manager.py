@@ -722,14 +722,14 @@ with tab4:
         filtered_contents = [c for c in filtered_contents 
                             if filter_date_from.strftime('%Y-%m-%d') <= c['date'] <= filter_date_to.strftime('%Y-%m-%d')]
         
-        # 테이블 형식으로 표시 - 컴팩트 버전
+        # 테이블 형식으로 표시
         st.markdown("### 📊 전체 콘텐츠 현황")
         
         for content in filtered_contents:
-            col1, col2, col3, col4, col5 = st.columns([1, 2.5, 1.5, 1.5, 0.5])
+            col1, col2, col3, col4, col5, col6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
             
             with col1:
-                st.write(content['date'][5:])  # MM-DD 형식만
+                st.write(content['date'][5:])  # MM-DD 형식
             
             with col2:
                 title_text = content.get('title', '제목 없음')
@@ -764,65 +764,51 @@ with tab4:
                 )
             
             with col5:
-                # 작업 버튼
-                if st.button("⚙️", key=f"action_{content['id']}", help="이동/삭제"):
-                    st.session_state[f"show_action_{content['id']}"] = not st.session_state.get(f"show_action_{content['id']}", False)
-            
-            # 작업 메뉴 (토글)
-            if st.session_state.get(f"show_action_{content['id']}", False):
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    if st.button("이동", key=f"move_btn_{content['id']}"):
-                        old_date = content['date']
-                        new_date_key = new_date.strftime('%Y-%m-%d')
-                        
-                        if old_date != new_date_key:
-                            for idx, c in enumerate(st.session_state.daily_contents[old_date]):
-                                if c['id'] == content['id']:
-                                    moved_content = st.session_state.daily_contents[old_date].pop(idx)
-                                    break
-                            
-                            if new_date_key not in st.session_state.daily_contents:
-                                st.session_state.daily_contents[new_date_key] = []
-                            st.session_state.daily_contents[new_date_key].append(moved_content)
-                            
-                            auto_save()
-                            st.success(f"{new_date_key}로 이동됨")
-                            st.rerun()
-                
-                with col_b:
-                    if st.button("🗑️ 삭제", key=f"del_upload_{content['id']}"):
-                        for idx, c in enumerate(st.session_state.daily_contents[content['date']]):
+                if st.button("이동", key=f"move_btn_{content['id']}"):
+                    old_date = content['date']
+                    new_date_key = new_date.strftime('%Y-%m-%d')
+                    
+                    if old_date != new_date_key:
+                        for idx, c in enumerate(st.session_state.daily_contents[old_date]):
                             if c['id'] == content['id']:
-                                st.session_state.daily_contents[content['date']].pop(idx)
-                                if not st.session_state.daily_contents[content['date']]:
-                                    del st.session_state.daily_contents[content['date']]
-                                if content['id'] in st.session_state.upload_status:
-                                    del st.session_state.upload_status[content['id']]
-                                if content['id'] in st.session_state.content_props:
-                                    del st.session_state.content_props[content['id']]
+                                moved_content = st.session_state.daily_contents[old_date].pop(idx)
                                 break
+                        
+                        if new_date_key not in st.session_state.daily_contents:
+                            st.session_state.daily_contents[new_date_key] = []
+                        st.session_state.daily_contents[new_date_key].append(moved_content)
+                        
                         auto_save()
+                        st.toast(f"✅ {new_date_key}로 이동", icon='✅')
                         st.rerun()
+            
+            with col6:
+                if st.button("🗑️", key=f"del_upload_{content['id']}", help="삭제"):
+                    for idx, c in enumerate(st.session_state.daily_contents[content['date']]):
+                        if c['id'] == content['id']:
+                            st.session_state.daily_contents[content['date']].pop(idx)
+                            if not st.session_state.daily_contents[content['date']]:
+                                del st.session_state.daily_contents[content['date']]
+                            if content['id'] in st.session_state.upload_status:
+                                del st.session_state.upload_status[content['id']]
+                            if content['id'] in st.session_state.content_props:
+                                del st.session_state.content_props[content['id']]
+                            break
+                    auto_save()
+                    st.rerun()
         
         # 통계
         st.divider()
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            total = len(filtered_contents)
-            st.metric("전체", f"{total}개")
-        
+            st.metric("전체", f"{len(filtered_contents)}개")
         with col2:
-            shooting = len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '촬영완료'])
-            st.metric("촬영완료", f"{shooting}개")
-        
+            st.metric("촬영완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '촬영완료'])}개")
         with col3:
-            edited = len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '편집완료'])
-            st.metric("편집완료", f"{edited}개")
-        
+            st.metric("편집완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '편집완료'])}개")
         with col4:
-            uploaded = len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])
-            st.metric("업로드완료", f"{uploaded}개")
+            st.metric("업로드완료", f"{len([c for c in filtered_contents if st.session_state.upload_status.get(c['id'], '촬영전') == '업로드완료'])}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
