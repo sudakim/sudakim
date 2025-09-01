@@ -54,17 +54,30 @@ def show_youtube_player(video_id):
             unsafe_allow_html=True
         )
 
-def latest_content_date_or_today():
+def nearest_content_date_from_today():
     """
-    daily_contents에서 비어있지 않은 날짜들 중 가장 최신 날짜를 기본값으로 사용.
-    없으면 오늘 날짜.
+    오늘 기준으로 가장 가까운 '미래(오늘 포함)' 날짜 중
+    콘텐츠가 1개 이상 등록된 날짜를 반환.
+    없다면 가장 최근 과거 날짜를 반환.
+    그래도 없으면 오늘 날짜를 반환.
     """
     contents = st.session_state.get('daily_contents', {})
-    keys = [k for k, v in contents.items() if v]
-    if not keys:
+    # 콘텐츠가 있는 날짜만 추출
+    dates = [datetime.strptime(k, '%Y-%m-%d').date()
+             for k, v in contents.items() if v]
+    if not dates:
         return datetime.now().date()
-    latest_str = max(keys)  # YYYY-MM-DD 문자열 비교로 최신 판별 가능
-    return datetime.strptime(latest_str, '%Y-%m-%d').date()
+
+    dates = sorted(dates)
+    today = datetime.now().date()
+
+    # 오늘 이상인 첫 날짜(가장 가까운 미래)
+    for d in dates:
+        if d >= today:
+            return d
+
+    # 미래가 없으면 가장 최근 과거
+    return dates[-1]
 
 # ------------------------- Gist 저장/불러오기 -------------------------
 try:
@@ -194,8 +207,8 @@ with tab1:
 
     col1, col2, col3 = st.columns([2, 1, 2])
     with col1:
-        # 최신 콘텐츠 등록 날짜를 기본값으로
-        selected_date = st.date_input("날짜 선택", latest_content_date_or_today(), key="content_date")
+        # 오늘 기준 가장 가까운 미래(없으면 최근 과거) 날짜로 기본 표시
+        selected_date = st.date_input("날짜 선택", nearest_content_date_from_today(), key="content_date")
         date_key = selected_date.strftime('%Y-%m-%d')
     with col2:
         num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
@@ -299,8 +312,8 @@ with tab1:
 with tab2:
     st.subheader("🛍️ 소품 구매")
 
-    # 최신 콘텐츠 등록 날짜를 기본값으로
-    prop_date = st.date_input("날짜", latest_content_date_or_today(), key="prop_date")
+    # 오늘 기준 가장 가까운 미래(없으면 최근 과거) 날짜로 기본 표시
+    prop_date = st.date_input("날짜", nearest_content_date_from_today(), key="prop_date")
     prop_date_key = prop_date.strftime('%Y-%m-%d')
 
     if prop_date_key in st.session_state.daily_contents and st.session_state.daily_contents[prop_date_key]:
