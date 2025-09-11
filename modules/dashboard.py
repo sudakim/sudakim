@@ -3,12 +3,13 @@ from __future__ import annotations
 import streamlit as st
 import pandas as pd
 from typing import Dict, Any, List
-from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr
 
-DOT = {"예정": "🔴", "주문완료": "🟡", "수령완료": "🟢"}
+# UI 유틸: 달력 토글(기본 OFF), 오늘 기준 가장 가까운 날짜, 날짜 문자열 변환, 소품 상태 마커
+from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 
 
 def _props_summary_for_content(cid: str | None) -> str:
+    """콘텐츠 ID로 소품 요약 (🔴이름(개수), …)"""
     if not cid:
         return "소품 0개"
     items = st.session_state.get("content_props", {}).get(cid, []) or []
@@ -21,7 +22,8 @@ def _props_summary_for_content(cid: str | None) -> str:
     return f"소품 {len(items)}개 · " + ", ".join(parts)
 
 
-def _final_preview(text: str, max_lines: int = 3) -> str:
+def _preview(text: str, max_lines: int = 3) -> str:
+    """최대 N줄까지 줄바꿈 유지하여 미리보기"""
     if not text:
         return ""
     lines = [ln.strip() for ln in str(text).splitlines()]
@@ -29,92 +31,54 @@ def _final_preview(text: str, max_lines: int = 3) -> str:
     return "\n".join(lines)
 
 
-def _str_len(x: Any) -> int:
-    """문자열 길이(이모지/마커 포함). None은 0."""
-    if x is None:
-        return 0
-    s = str(x)
-    return len(s)
-
-
-def _autosize_column_widths(
-    df: pd.DataFrame,
-    base_px: int = 10,          # 문자 1개 당 대략 px(폰트/테마에 따라 8~10px 정도)
-    padding_px: int = 32,       # 좌우 패딩/여백 보정
-    min_px_map: Dict[str, int] | None = None,
-    max_px_map: Dict[str, int] | None = None,
-) -> Dict[str, st.column_config.TextColumn]:
+def _final_or_draft_preview(content: Dict[str, Any]) -> str:
     """
-    DataFrame 내용을 훑어 각 열의 최대 문자열 길이로 픽셀 폭을 추정해서
-    st.dataframe column_config(TextColumn(width=px))을 만들어 준다.
+    최종안이 있으면 최종안, 없으면 (초안) + 초안 미리보기 반환.
     """
-    if min_px_map is None:
-        min_px_map = {
-            "시간": 90,
-            "유형": 80,
-            "제목": 140,
-            "출연": 100,
-            "소품현황": 220,
-            "최종안": 220,
-        }
-    if max_px_map is None:
-        max_px_map = {
-            "시간": 90,
-            "유형": 80,
-            "제목": 360,
-            "출연": 140,
-            "소품현황": 500,
-            "최종안": 820,
-        }
+    final_txt = content.get("final", "") or ""
+    if final_txt.strip():
+        return _preview(final_txt)
 
-    cfg: Dict[str, st.column_config.TextColumn] = {}
-    for col in df.columns:
-        # 최대 길이 계산 (헤더/내용 모두 고려)
-        header_len = _str_len(col)
-        body_len = max([_str_len(v) for v in df[col].tolist()] + [0])
-        max_chars = max(header_len, body_len)
-
-        # 픽셀 폭 추정
-        width_px = max_chars * base_px + padding_px
-        width_px = max(width_px, min_px_map.get(col, 100))
-        width_px = min(width_px, max_px_map.get(col, 600))
-
-        cfg[col] = st.column_config.TextColumn(col, width=width_px)
-
-    return cfg
+    draft_txt = content.get("draft", "") or ""
+    if draft_txt.strip():
+        return "(초안) " + _preview(draft_txt)
+    return ""
 
 
 def render():
     st.subheader("🧭 대시보드 (요약)")
 
-    # 기준 날짜(토글 달력, 기본 OFF)
+    # 기준 날짜: 토글 달력(기본 OFF) + 오늘 기준 가장 가까운 날짜
     sel = date_picker_with_toggle("기준 날짜", key="dash", default=nearest_anchor_date_today())
     dkey = to_datestr(sel)
 
+    # 상태 읽기
     daily: List[Dict[str, Any]] = st.session_state.get("daily_contents", {}).get(dkey, []) or []
     scheds: List[Dict[str, Any]] = st.session_state.get("schedules", {}).get(dkey, []) or []
-
     by_id: Dict[str, Dict[str, Any]] = {c.get("id", ""): c for c in daily}
 
+    # 표 데이터 빌드
     rows: List[Dict[str, Any]] = []
     if scheds:
+        # 타임테이블 순서 기준
         for s in scheds:
             cid = s.get("cid")
             title = s.get("title", "")
             perf = ""
-            final_txt = ""
+            final_like = ""
 
             if cid and cid in by_id:
                 c = by_id[cid]
                 title = c.get("title", title)
                 perf = ", ".join(c.get("performers", []))
-                final_txt = _final_preview(c.get("final", ""))
+                final_like = _final_or_draft_preview(c)
             else:
+                # cid 없으면 제목 매칭으로 보조
                 for c in daily:
                     if c.get("title") == title:
                         cid = c.get("id")
                         perf = ", ".join(c.get("performers", []))
-                        final_txt = _final_preview(c.get("final", ""))
+                        final_like = _final_or_draft_preview(c)
                         break
 
             rows.append(
@@ -124,10 +88,11 @@ def render():
                     "제목": title or "(제목 없음)",
                     "출연": perf,
                     "소품현황": _props_summary_for_content(cid),
-                    "최종안": final_txt,
+                    "최종안": final_like,   # ← 최종안이 없으면 (초안)으로 대체
                 }
             )
     else:
+        # 스케줄 없으면 콘텐츠만 요약
         for c in daily:
             cid = c.get("id")
             rows.append(
@@ -137,18 +102,40 @@ def render():
                     "제목": c.get("title", "(제목 없음)"),
                     "출연": ", ".join(c.get("performers", [])),
                     "소품현황": _props_summary_for_content(cid),
-                    "최종안": _final_preview(c.get("final", "")),
+                    "최종안": _final_or_draft_preview(c),  # ← 최종안/초안 표시
                 }
             )
 
     df = pd.DataFrame(rows)
 
-    # 👉 내용 기반 “오토사이즈” 효과: 열별 px 폭 자동 계산
-    column_cfg = _autosize_column_widths(df)
+    # ===== 화면 비율 기반 열 너비 =====
+    # 컨테이너 가로폭 추정(px) — 화면 느낌에 맞게 1200~1500 사이 조정 가능
+    CONTAINER_PX = 1300
+
+    # 열 비율(합이 1.0 근처): 요청한 느낌에 맞춘 기본값
+    ratios = {
+        "시간": 0.08,
+        "유형": 0.07,
+        "제목": 0.17,
+        "출연": 0.12,
+        "소품현황": 0.36,
+        "최종안": 0.20,
+    }
+
+    def _w(col: str, default_px: int = 120, min_px: int = 80, max_px: int = 900) -> int:
+        px = int(ratios.get(col, 0.15) * CONTAINER_PX)
+        return max(min_px, min(px, max_px))
 
     st.dataframe(
         df,
-        use_container_width=True,   # 화면에 맞추되
+        use_container_width=True,
         hide_index=True,
-        column_config=column_cfg,   # 각 열을 내용 길이에 맞춰 픽셀 폭으로 지정
+        column_config={
+            "시간":      st.column_config.TextColumn("시간",      width=_w("시간")),
+            "유형":      st.column_config.TextColumn("유형",      width=_w("유형")),
+            "제목":      st.column_config.TextColumn("제목",      width=_w("제목")),
+            "출연":      st.column_config.TextColumn("출연",      width=_w("출연")),
+            "소품현황":  st.column_config.TextColumn("소품현황",  width=_w("소품현황")),
+            "최종안":    st.column_config.TextColumn("최종안",    width=_w("최종안")),
+        },
     )
