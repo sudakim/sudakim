@@ -222,11 +222,13 @@ with tab2:
 
     if prop_date_key in st.session_state.daily_contents and st.session_state.daily_contents[prop_date_key]:
         for idx, content in enumerate(st.session_state.daily_contents[prop_date_key]):
-            # ID가 없는 기존 콘텐츠에 고유 ID 할당
-            if 'id' not in content or not content['id']:
+            content_id = content.get('id')
+            # ID가 없거나 유효하지 않은 경우 새로 생성
+            if not content_id:
                 import time
-                content['id'] = f"{prop_date_key}_{idx}_{int(time.time())}"
-            content_id = content['id']
+                content_id = f"{prop_date_key}_{idx}_{int(time.time())}_{idx}"
+                content['id'] = content_id
+                
             if content_id not in st.session_state.content_props: st.session_state.content_props[content_id] = []
             
             props = st.session_state.content_props[content_id]
