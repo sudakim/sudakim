@@ -61,7 +61,6 @@ try:
     GIST_ID = st.secrets["gist_id"]
     GITHUB_TOKEN = st.secrets["github_token"]
 except Exception:
-    # 공개 리포/공유 방지용 placeholder — 실제 서비스 시 반드시 secrets.toml 사용!
     GIST_ID = "YOUR_GIST_ID_HERE"
     GITHUB_TOKEN = "ghp_YOUR_GITHUB_TOKEN_HERE"
 
@@ -90,7 +89,6 @@ def load_from_gist():
             files = r.json().get("files", {})
             f = files.get("youtube_data.json", {})
             if not f: return None
-            # 대용량일 경우 content가 잘리고 truncated=True가 옴 → raw_url로 재요청
             if f.get("truncated") and f.get("raw_url"):
                 raw = requests.get(f["raw_url"], timeout=10).text
                 return json.loads(raw)
@@ -146,7 +144,6 @@ def _dedupe_ids_inplace():
     changed = False
     id_map_old_to_new = {}
 
-    # 1) daily_contents 내에서 중복 탐지/치유
     for dkey, items in list(st.session_state.daily_contents.items()):
         for i, item in enumerate(items):
             cid = item.get('id')
@@ -157,13 +154,10 @@ def _dedupe_ids_inplace():
                 changed = True
             seen.add(item['id'])
 
-    # 2) upload_status / content_props 키 이관
     if changed:
-        # upload_status
         for old, new in list(id_map_old_to_new.items()):
             if old in st.session_state.upload_status:
                 st.session_state.upload_status[new] = st.session_state.upload_status.pop(old)
-        # content_props
         for old, new in list(id_map_old_to_new.items()):
             if old in st.session_state.content_props:
                 st.session_state.content_props[new] = st.session_state.content_props.pop(old)
@@ -180,6 +174,11 @@ if 'initialized' not in st.session_state:
     st.session_state.upload_status  = data.get('upload_status', {}) if data else {}
     _dedupe_ids_inplace()
     st.session_state.initialized = True
+    # 주기 자동저장 기본값
+    if 'enable_periodic_autosave' not in st.session_state:
+        st.session_state.enable_periodic_autosave = True
+    if 'autosave_interval_sec' not in st.session_state:
+        st.session_state.autosave_interval_sec = 20
     st.toast("☁️ 데이터를 불러왔습니다", icon='✅')
 
 def refresh_data():
@@ -187,16 +186,42 @@ def refresh_data():
     st.rerun()
 
 # ------------------------- 상단 바 -------------------------
-col1, col2, col3, col4 = st.columns([5, 1, 1, 1.5])
-with col1: st.title("🎬 유튜브 콘텐츠 매니저")
-with col2:
+left, mid1, mid2, right = st.columns([5, 1, 1, 2.5])
+with left: st.title("🎬 유튜브 콘텐츠 매니저")
+with mid1:
     if st.button("🔄", help="데이터 새로고침"): refresh_data()
-with col3:
+with mid2:
     if st.button("💾", help="수동 저장"):
         auto_save()
         st.toast(f"✅ 수동 저장 완료! ({st.session_state.get('last_save_time', 'N/A')})")
-with col4:
-    st.caption(f"Last auto-save: {st.session_state.get('last_save_time', 'N/A')}")
+with right:
+    # 주기 자동저장 토글/간격
+    st.toggle("⏱️ 자동저장", key="enable_periodic_autosave")
+    st.caption(f"Auto-save: {st.session_state.get('last_save_time', 'N/A')}")
+
+# ------------------------- 주기 자동저장 구현 -------------------------
+# Streamlit의 st_autorefresh로 N초마다 리런 → 리런 시 auto_save() 한 번 호출
+try:
+    from streamlit_autorefresh import st_autorefresh  # (패키지 설치형) 사용 안 함
+    _HAS_EXTRA = True
+except Exception:
+    _HAS_EXTRA = False
+
+# Streamlit 기본 내장 함수 (최근 버전): st.autorefresh
+# 일부 버전에선 st.experimental_rerun 기반일 수 있으니 try/except로 호환 처리
+_autorefresh_fn = getattr(st, "autorefresh", None) or getattr(st, "experimental_rerun", None)
+
+if st.session_state.enable_periodic_autosave and callable(getattr(st, "autorefresh", None)):
+    count = st.autorefresh(interval=st.session_state.autosave_interval_sec * 1000,
+                           key="__periodic_autosave__")
+    # 리런 직후 한 번 저장
+    if count is not None:
+        # 너무 잦은 저장 방지: 2초 이내 중복 방지
+        last_ts = st.session_state.get("__last_autosave_ts__")
+        now_ts = datetime.now().timestamp()
+        if not last_ts or now_ts - last_ts > 2:
+            auto_save()
+            st.session_state["__last_autosave_ts__"] = now_ts
 
 # ------------------------- 탭 -------------------------
 tab1, tab2, tab3, tab4 = st.tabs(["📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"])
@@ -219,7 +244,8 @@ with tab1:
     with col2:
         num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
     with col3:
-        if st.button("✨ 양식 생성", type="primary"):
+        # 라벨 변경: 양식 생성 → 양식 추가
+        if st.button("✨ 양식 추가", type="primary"):
             if date_key not in st.session_state.daily_contents:
                 st.session_state.daily_contents[date_key] = []
             current_count = len(st.session_state.daily_contents[date_key])
@@ -243,13 +269,28 @@ with tab1:
             upload_status = st.session_state.upload_status.get(content_id, "촬영전")
             status_emoji = UPLOAD_STATUS_EMOJI.get(upload_status, "❓")
             expander_title = f"{status_emoji} #{idx+1}. {content.get('title', '제목 없음')}"
-
-            # 위젯 키 충돌 방지를 위한 안전 접미사
-            wkey = f"{content_id}_{idx}"
+            wkey = f"{content_id}_{idx}"  # 위젯 키 안전 접미사
 
             with st.expander(expander_title, expanded=False):
-                content['title'] = st.text_input("제목", value=content.get('title', ''),
-                                                 key=f"title_{wkey}", on_change=auto_save)
+                # 상단 삭제/제목 한 줄
+                del_col, title_col = st.columns([0.8, 6])
+                with del_col:
+                    if st.button("🗑️", key=f"del_{wkey}", help="이 콘텐츠 삭제"):
+                        # 해당 콘텐츠 제거 + 관련 상태/소품도 정리
+                        st.session_state.daily_contents[date_key].pop(idx)
+                        if content_id in st.session_state.upload_status:
+                            del st.session_state.upload_status[content_id]
+                        if content_id in st.session_state.content_props:
+                            del st.session_state.content_props[content_id]
+                        # 비어 있으면 날짜 키 제거
+                        if not st.session_state.daily_contents[date_key]:
+                            del st.session_state.daily_contents[date_key]
+                        auto_save()
+                        st.rerun()
+
+                with title_col:
+                    content['title'] = st.text_input("제목", value=content.get('title', ''),
+                                                     key=f"title_{wkey}", on_change=auto_save)
 
                 performers = ["전부", "다혜", "수빈", "예람", "보조"]
                 content['performers'] = st.multiselect("출연자", performers,
@@ -311,7 +352,6 @@ with tab2:
                 if props:
                     st.divider()
                     for p_idx, p in enumerate(props):
-                        # 위젯 키 안전 접미사
                         pk = f"{content_id}_{p_idx}"
                         c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 2, 1])
                         with c1:
@@ -321,7 +361,6 @@ with tab2:
                             p['vendor'] = st.text_input("구매처", p.get('vendor',''), key=f"pv_{pk}",
                                                         label_visibility="collapsed", on_change=auto_save)
                         with c3:
-                            # 안전한 정수 변환
                             safe_qty = 1
                             try:
                                 safe_qty = int(p.get('quantity', 1))
@@ -369,7 +408,6 @@ with tab3:
     st.divider()
 
     if schedule:
-        # 전체 범위 요약(선택적 가독성)
         try:
             starts = sorted(item['start'] for item in schedule)
             ends = sorted(item['end'] for item in schedule)
@@ -439,7 +477,6 @@ with tab4:
         for row_idx, content in enumerate(filtered):
             content_id = content['id']
             st.markdown("---")
-            # 키 충돌 방지: content_id + row_idx
             rk = f"{content_id}_{row_idx}"
             k1, k2, k3, k4, k5, k6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
 
@@ -477,11 +514,9 @@ with tab4:
                             st.toast(f"✅ {new_key}로 이동", icon='✅'); st.rerun()
             with k6:
                 if st.button("🗑️", key=f"del_upload_{rk}", help="삭제"):
-                    # 해당 날짜에서 제거
                     st.session_state.daily_contents[content['date']] = [c for c in st.session_state.daily_contents[content['date']] if c['id'] != content_id]
                     if not st.session_state.daily_contents[content['date']]:
                         del st.session_state.daily_contents[content['date']]
-                    # 상태/소품도 정리
                     if content_id in st.session_state.upload_status:
                         del st.session_state.upload_status[content_id]
                     if content_id in st.session_state.content_props:
