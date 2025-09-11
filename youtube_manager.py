@@ -19,3 +19,19 @@ with st.sidebar:
     st.caption(f"source: {src} / last saved: {when}")
 
 # ... 탭 구성은 기존 그대로 ...
+st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
+
+dash_tab, tab1, tab2, tab3, tab4 = st.tabs(
+    ["🏠 대시보드", "📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"]
+)
+
+with dash_tab:
+    dashboard.render()
+with tab1:
+    planning.render()
+with tab2:
+    props.render()
+with tab3:
+    timetable.render()
+with tab4:
+    uploads.render()
