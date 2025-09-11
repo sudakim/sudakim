@@ -3,6 +3,9 @@ from __future__ import annotations
 import streamlit as st
 import pandas as pd
 from .ui import pick_date_with_markers, nearest_anchor_date_today, to_datestr
+from modules import storage
+# ... 데이터 수정 직후에:
+storage.autosave_maybe()
 
 STATES = ["촬영전","촬영완료","편집완료","업로드완료"]
 EMOJI  = {"촬영전":"🔵","촬영완료":"🟡","편집완료":"🟠","업로드완료":"🟢"}
