@@ -3,9 +3,9 @@ from __future__ import annotations
 import streamlit as st
 import pandas as pd
 from typing import Dict, Any, List
-from .ui import pick_date_with_markers, nearest_anchor_date_today, to_datestr
+from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr
 
-# 상태 → 마커 (소품)
+# 소품 상태 → 마커
 DOT = {"예정": "🔴", "주문완료": "🟡", "수령완료": "🟢"}
 
 def _props_summary_for_content(cid: str | None) -> str:
@@ -33,8 +33,7 @@ def render():
     st.subheader("🧭 대시보드 (요약)")
 
     # 기준 날짜 선택 (토글형 달력, 기본 OFF) — 오늘 기준 가장 가까운 날짜로 기본
-    anchor = nearest_anchor_date_today()
-    sel = pick_date_with_markers(selected=anchor, key="dash_calendar")
+    sel = date_picker_with_toggle("기준 날짜", key="dash", default=nearest_anchor_date_today())
     dkey = to_datestr(sel)
 
     daily: List[Dict[str, Any]] = st.session_state.get("daily_contents", {}).get(dkey, []) or []
