@@ -3,6 +3,9 @@ from __future__ import annotations
 import streamlit as st
 from datetime import date, datetime
 from .ui import pick_date_with_markers, nearest_anchor_date_today, to_datestr, DOT
+from modules import storage
+# ... 데이터 수정 직후에:
+storage.autosave_maybe()
 
 def render():
     st.subheader("🛍️ 소품 구매")
