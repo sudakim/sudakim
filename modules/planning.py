@@ -4,6 +4,9 @@ import streamlit as st
 from datetime import date, datetime
 import uuid
 from .ui import pick_date_with_markers, nearest_anchor_date_today, to_datestr
+from modules import storage
+# ... 데이터 수정 직후에:
+storage.autosave_maybe()
 
 def _ensure_state():
     st.session_state.setdefault("daily_contents", {})
