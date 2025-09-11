@@ -43,9 +43,9 @@ def render():
     st.subheader("📝 콘텐츠 기획")
 
     # ===== 상단: 최신 토글 달력(마커) =====
-    # 대시보드와 동일한 유틸 사용. 기본은 토글 OFF, 켜면 팝업형 달력 표시 + 마커.
+    # ❗ 여기 수정: label= 키워드 사용하지 말고 첫 번째 인자로 문자열 전달
     sel = date_picker_with_toggle(
-        label="날짜 선택",
+        "날짜 선택",                 # ← 포지셔널 인자로 라벨 전달
         key="planning",
         default=st.session_state.plan_selected,
     )
