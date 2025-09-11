@@ -81,7 +81,7 @@ def render():
                 "최종안": _final_preview(c.get("final", "")),
             })
 
-   df = pd.DataFrame(rows)
+df = pd.DataFrame(rows)
 
 # 열 길이를 글자 수에 맞게 자동 조정
 st.dataframe(
@@ -97,3 +97,4 @@ st.dataframe(
         "최종안": st.column_config.TextColumn("최종안", width="large"),
     }
 )
+
