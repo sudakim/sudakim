@@ -81,20 +81,19 @@ def render():
                 "최종안": _final_preview(c.get("final", "")),
             })
 
-    df = pd.DataFrame(rows)
+   df = pd.DataFrame(rows)
 
-    # 컬럼별 가로폭/텍스트 설정 (글자수에 맞춰 보기 좋게)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "시간": st.column_config.TextColumn(width="small"),
-            "유형": st.column_config.TextColumn(width=90),
-            "제목": st.column_config.TextColumn(width=220),
-            "출연": st.column_config.TextColumn(width=160),
-            "소품현황": st.column_config.TextColumn(width=520),
-            # 줄바꿈 유지: dataframe는 \n을 표시해줌 (세로는 표 높이에 맞춰 스크롤)
-            "최종안": st.column_config.TextColumn(width=360),
-        },
-    )
+# 열 길이를 글자 수에 맞게 자동 조정
+st.dataframe(
+    df,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "시간": st.column_config.TextColumn("시간", width="small"),
+        "유형": st.column_config.TextColumn("유형", width="small"),
+        "제목": st.column_config.TextColumn("제목", width="medium"),
+        "출연": st.column_config.TextColumn("출연", width="medium"),
+        "소품현황": st.column_config.TextColumn("소품현황", width="large"),
+        "최종안": st.column_config.TextColumn("최종안", width="large"),
+    }
+)
