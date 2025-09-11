@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta
 import json
 import requests
 import re
+import uuid
 
 # ------------------------- 페이지/스타일 -------------------------
 st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
@@ -60,6 +61,7 @@ try:
     GIST_ID = st.secrets["gist_id"]
     GITHUB_TOKEN = st.secrets["github_token"]
 except Exception:
+    # 공개 리포/공유 방지용 placeholder — 실제 서비스 시 반드시 secrets.toml 사용!
     GIST_ID = "YOUR_GIST_ID_HERE"
     GITHUB_TOKEN = "ghp_YOUR_GITHUB_TOKEN_HERE"
 
@@ -86,7 +88,13 @@ def load_from_gist():
         r = SESSION.get(url, timeout=10)
         if r.status_code == 200:
             files = r.json().get("files", {})
-            content = files.get("youtube_data.json", {}).get("content")
+            f = files.get("youtube_data.json", {})
+            if not f: return None
+            # 대용량일 경우 content가 잘리고 truncated=True가 옴 → raw_url로 재요청
+            if f.get("truncated") and f.get("raw_url"):
+                raw = requests.get(f["raw_url"], timeout=10).text
+                return json.loads(raw)
+            content = f.get("content")
             if content:
                 return json.loads(content)
     except Exception:
@@ -119,7 +127,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# ------------------------- 세션 초기화/저장/새로고침 -------------------------
+# ------------------------- 자동 저장 -------------------------
 def auto_save():
     data = {
         'contents': st.session_state.daily_contents,
@@ -131,12 +139,46 @@ def auto_save():
     if save_to_gist(data):
         st.session_state.last_save_time = datetime.now().strftime('%H:%M:%S')
 
+# ------------------------- 중복 id 자동 치유 -------------------------
+def _dedupe_ids_inplace():
+    """daily_contents 내부 content.id 중복을 제거하고, upload_status/props 키도 함께 이관"""
+    seen = set()
+    changed = False
+    id_map_old_to_new = {}
+
+    # 1) daily_contents 내에서 중복 탐지/치유
+    for dkey, items in list(st.session_state.daily_contents.items()):
+        for i, item in enumerate(items):
+            cid = item.get('id')
+            if not cid or cid in seen:
+                new_id = f"{dkey}_{uuid.uuid4().hex[:8]}"
+                id_map_old_to_new[cid] = new_id
+                item['id'] = new_id
+                changed = True
+            seen.add(item['id'])
+
+    # 2) upload_status / content_props 키 이관
+    if changed:
+        # upload_status
+        for old, new in list(id_map_old_to_new.items()):
+            if old in st.session_state.upload_status:
+                st.session_state.upload_status[new] = st.session_state.upload_status.pop(old)
+        # content_props
+        for old, new in list(id_map_old_to_new.items()):
+            if old in st.session_state.content_props:
+                st.session_state.content_props[new] = st.session_state.content_props.pop(old)
+        auto_save()
+
+# ------------------------- 세션 초기화 -------------------------
 if 'initialized' not in st.session_state:
     data = load_from_gist()
+    if data is None:
+        st.toast("⚠️ 클라우드 데이터 로드 실패 (로컬 세션으로 시작)", icon="⚠️")
     st.session_state.daily_contents = data.get('contents', {}) if data else {}
     st.session_state.content_props  = data.get('props', {}) if data else {}
     st.session_state.schedules      = data.get('schedules', {}) if data else {}
     st.session_state.upload_status  = data.get('upload_status', {}) if data else {}
+    _dedupe_ids_inplace()
     st.session_state.initialized = True
     st.toast("☁️ 데이터를 불러왔습니다", icon='✅')
 
@@ -171,17 +213,22 @@ with tab1:
         def update_selected_date():
             st.session_state.selected_date = st.session_state.content_date_widget
 
-        selected_date = st.date_input("날짜 선택", value=st.session_state.selected_date, key="content_date_widget", on_change=update_selected_date)
+        selected_date = st.date_input("날짜 선택", value=st.session_state.selected_date,
+                                      key="content_date_widget", on_change=update_selected_date)
         date_key = selected_date.strftime('%Y-%m-%d')
     with col2:
         num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
     with col3:
         if st.button("✨ 양식 생성", type="primary"):
-            if date_key not in st.session_state.daily_contents: st.session_state.daily_contents[date_key] = []
+            if date_key not in st.session_state.daily_contents:
+                st.session_state.daily_contents[date_key] = []
             current_count = len(st.session_state.daily_contents[date_key])
             for i in range(num_contents):
                 content_id = f"{date_key}_{current_count + i}"
-                st.session_state.daily_contents[date_key].append({'id': content_id, 'title': '', 'draft': '', 'feedback': '', 'revision': '', 'final': '', 'reference': '', 'performers': []})
+                st.session_state.daily_contents[date_key].append({
+                    'id': content_id, 'title': '', 'draft': '', 'feedback': '',
+                    'revision': '', 'final': '', 'reference': '', 'performers': []
+                })
                 st.session_state.upload_status[content_id] = '촬영전'
             auto_save()
             st.rerun()
@@ -196,21 +243,39 @@ with tab1:
             upload_status = st.session_state.upload_status.get(content_id, "촬영전")
             status_emoji = UPLOAD_STATUS_EMOJI.get(upload_status, "❓")
             expander_title = f"{status_emoji} #{idx+1}. {content.get('title', '제목 없음')}"
-            
+
+            # 위젯 키 충돌 방지를 위한 안전 접미사
+            wkey = f"{content_id}_{idx}"
+
             with st.expander(expander_title, expanded=False):
-                content['title'] = st.text_input("제목", value=content.get('title', ''), key=f"title_{content_id}", on_change=auto_save)
+                content['title'] = st.text_input("제목", value=content.get('title', ''),
+                                                 key=f"title_{wkey}", on_change=auto_save)
+
                 performers = ["전부", "다혜", "수빈", "예람", "보조"]
-                content['performers'] = st.multiselect("출연자", performers, default=content.get('performers', []), key=f"performers_{content_id}", on_change=auto_save)
-                content['reference'] = st.text_input("참고 링크", value=content.get('reference', ''), key=f"ref_{content_id}", on_change=auto_save)
-                if 'youtube' in content.get('reference', ''): show_youtube_player(get_youtube_id(content['reference']))
+                content['performers'] = st.multiselect("출연자", performers,
+                                                       default=content.get('performers', []),
+                                                       key=f"performers_{wkey}", on_change=auto_save)
+
+                content['reference'] = st.text_input("참고 링크", value=content.get('reference', ''),
+                                                     key=f"ref_{wkey}", on_change=auto_save)
+                if 'youtube' in content.get('reference', ''):
+                    show_youtube_player(get_youtube_id(content['reference']))
 
                 plan_tabs = st.tabs(["📝 초안", "🗣️ 피드백", "🤔 추가의견", "✅ 최종"])
-                with plan_tabs[0]: content['draft'] = st.text_area("초안", value=content.get('draft', ''), height=150, key=f"draft_{content_id}", on_change=auto_save)
-                with plan_tabs[1]: content['feedback'] = st.text_area("피드백", value=content.get('feedback', ''), height=150, key=f"feedback_{content_id}", on_change=auto_save)
-                with plan_tabs[2]: content['revision'] = st.text_area("추가의견", value=content.get('revision', ''), height=150, key=f"revision_{content_id}", on_change=auto_save)
-                with plan_tabs[3]: content['final'] = st.text_area("최종", value=content.get('final', ''), height=150, key=f"final_{content_id}", on_change=auto_save)
+                with plan_tabs[0]:
+                    content['draft'] = st.text_area("초안", value=content.get('draft', ''),
+                                                    height=150, key=f"draft_{wkey}", on_change=auto_save)
+                with plan_tabs[1]:
+                    content['feedback'] = st.text_area("피드백", value=content.get('feedback', ''),
+                                                       height=150, key=f"feedback_{wkey}", on_change=auto_save)
+                with plan_tabs[2]:
+                    content['revision'] = st.text_area("추가의견", value=content.get('revision', ''),
+                                                       height=150, key=f"revision_{wkey}", on_change=auto_save)
+                with plan_tabs[3]:
+                    content['final'] = st.text_area("최종", value=content.get('final', ''),
+                                                    height=150, key=f"final_{wkey}", on_change=auto_save)
 
-                filled = sum(1 for f in ('draft','feedback','revision','final') if content.get(f))
+                filled = sum(1 for f in ('draft', 'feedback', 'revision', 'final') if content.get(f))
                 st.progress(min(1.0, max(0.0, filled * 0.25)))
 
 # ========================= 탭2: 소품 구매 =========================
@@ -222,21 +287,15 @@ with tab2:
 
     if prop_date_key in st.session_state.daily_contents and st.session_state.daily_contents[prop_date_key]:
         for idx, content in enumerate(st.session_state.daily_contents[prop_date_key]):
-            content_id = content.get('id')
-            # ID가 없거나 유효하지 않은 경우 새로 생성
-            if not content_id:
-                import time
-                content_id = f"{prop_date_key}_{idx}_{int(time.time())}_{idx}"
-                content['id'] = content_id
-                
-            if content_id not in st.session_state.content_props: st.session_state.content_props[content_id] = []
-            
+            content_id = content.get('id', f"{prop_date_key}_{idx}")
+            if content_id not in st.session_state.content_props:
+                st.session_state.content_props[content_id] = []
             props = st.session_state.content_props[content_id]
+
             expander_title = f"#{idx+1}. {content.get('title', '제목 없음')} (소품 {len(props)}개)"
-            
             with st.expander(expander_title):
                 st.markdown("**➕ 소품 추가**")
-                c1,c2,c3,c4,c5 = st.columns([3,2,1,2,1])
+                c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 2, 1])
                 with c1: new_name = st.text_input("소품명", key=f"new_n_{content_id}")
                 with c2: new_vendor = st.text_input("구매처", key=f"new_v_{content_id}")
                 with c3: new_quantity = st.number_input("개수", 1, key=f"new_q_{content_id}")
@@ -252,23 +311,32 @@ with tab2:
                 if props:
                     st.divider()
                     for p_idx, p in enumerate(props):
-                        c1,c2,c3,c4,c5 = st.columns([3,2,1,2,1])
-                        with c1: p['name'] = st.text_input("소품명", p['name'], key=f"pn_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
-                        with c2: p['vendor'] = st.text_input("구매처", p.get('vendor', ''), key=f"pv_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
-                        with c3: 
+                        # 위젯 키 안전 접미사
+                        pk = f"{content_id}_{p_idx}"
+                        c1, c2, c3, c4, c5 = st.columns([3, 2, 1, 2, 1])
+                        with c1:
+                            p['name'] = st.text_input("소품명", p.get('name',''), key=f"pn_{pk}",
+                                                      label_visibility="collapsed", on_change=auto_save)
+                        with c2:
+                            p['vendor'] = st.text_input("구매처", p.get('vendor',''), key=f"pv_{pk}",
+                                                        label_visibility="collapsed", on_change=auto_save)
+                        with c3:
                             # 안전한 정수 변환
                             safe_qty = 1
                             try:
                                 safe_qty = int(p.get('quantity', 1))
                             except (ValueError, TypeError):
                                 safe_qty = 1
-                            p['quantity'] = st.number_input("개수", value=safe_qty, min_value=1, step=1, key=f"pq_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
+                            p['quantity'] = st.number_input("개수", value=safe_qty, min_value=1, step=1,
+                                                            key=f"pq_{pk}", label_visibility="collapsed", on_change=auto_save)
                         with c4:
                             current_status = p.get('status', PROP_STATUS_OPTIONS[0])
                             if current_status not in PROP_STATUS_OPTIONS: current_status = PROP_STATUS_OPTIONS[0]
-                            p['status'] = st.selectbox("상태", PROP_STATUS_OPTIONS, index=PROP_STATUS_OPTIONS.index(current_status), key=f"ps_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
+                            p['status'] = st.selectbox("상태", PROP_STATUS_OPTIONS,
+                                                       index=PROP_STATUS_OPTIONS.index(current_status),
+                                                       key=f"ps_{pk}", label_visibility="collapsed", on_change=auto_save)
                         with c5:
-                            if st.button("🗑️", key=f"del_p_{content_id}_{p_idx}"):
+                            if st.button("🗑️", key=f"del_p_{pk}"):
                                 props.pop(p_idx)
                                 auto_save()
                                 st.rerun()
@@ -279,11 +347,12 @@ with tab3:
     schedule_date = st.date_input("날짜", datetime.now().date(), key="schedule_date")
     schedule_date_key = schedule_date.strftime('%Y-%m-%d')
 
-    if schedule_date_key not in st.session_state.schedules: st.session_state.schedules[schedule_date_key] = []
+    if schedule_date_key not in st.session_state.schedules:
+        st.session_state.schedules[schedule_date_key] = []
     schedule = st.session_state.schedules[schedule_date_key]
 
     with st.expander("➕ 일정 추가"):
-        c1,c2,c3,c4,c5 = st.columns([1,1,1.5,3,1])
+        c1, c2, c3, c4, c5 = st.columns([1, 1, 1.5, 3, 1])
         with c1: new_start = st.time_input("시작", time(12,0), key=f"new_s_{schedule_date_key}")
         with c2: new_end = st.time_input("종료", time(13,0), key=f"new_e_{schedule_date_key}")
         with c3: new_type = st.selectbox("유형", ["🎬촬영", "🍽️식사", "☕휴식", "📝회의", "🚗이동", "🎯기타"], key=f"new_t_{schedule_date_key}")
@@ -292,32 +361,50 @@ with tab3:
             st.write("")
             if st.button("추가", key=f"add_sched_{schedule_date_key}"):
                 if new_title:
-                    schedule.append({'start': _fmt_time(new_start), 'end': _fmt_time(new_end), 'type': new_type, 'title': new_title, 'details': ''})
+                    schedule.append({'start': _fmt_time(new_start), 'end': _fmt_time(new_end),
+                                     'type': new_type, 'title': new_title, 'details': ''})
                     schedule.sort(key=lambda x: x['start'])
                     auto_save()
                     st.rerun()
     st.divider()
 
     if schedule:
+        # 전체 범위 요약(선택적 가독성)
+        try:
+            starts = sorted(item['start'] for item in schedule)
+            ends = sorted(item['end'] for item in schedule)
+            if starts and ends:
+                st.caption(f"📌 전체: {starts[0]} ~ {ends[-1]}")
+        except Exception:
+            pass
+
         for idx, item in enumerate(schedule):
             st.markdown("---")
-            c1,c2,c3,c4,c5 = st.columns([1,1,1.5,3,1])
+            c1, c2, c3, c4, c5 = st.columns([1, 1, 1.5, 3, 1])
             key_suffix = f"_{idx}_{schedule_date_key}"
-            with c1: item['start'] = _fmt_time(st.time_input("시작", _to_time(item['start']), key=f"s_start{key_suffix}", label_visibility="collapsed", on_change=auto_save))
-            with c2: item['end'] = _fmt_time(st.time_input("종료", _to_time(item['end']), key=f"s_end{key_suffix}", label_visibility="collapsed", on_change=auto_save))
+            with c1:
+                item['start'] = _fmt_time(st.time_input("시작", _to_time(item['start']),
+                                                        key=f"s_start{key_suffix}", label_visibility="collapsed", on_change=auto_save))
+            with c2:
+                item['end'] = _fmt_time(st.time_input("종료", _to_time(item['end']),
+                                                      key=f"s_end{key_suffix}", label_visibility="collapsed", on_change=auto_save))
             with c3:
                 types_list = ["🎬촬영", "🍽️식사", "☕휴식", "📝회의", "🚗이동", "🎯기타"]
                 current_type = item.get('type', types_list[0])
                 if current_type not in types_list: current_type = types_list[0]
-                item['type'] = st.selectbox("유형", types_list, index=types_list.index(current_type), key=f"s_type{key_suffix}", label_visibility="collapsed", on_change=auto_save)
-            with c4: item['title'] = st.text_input("제목", item['title'], key=f"s_title{key_suffix}", label_visibility="collapsed", on_change=auto_save)
+                item['type'] = st.selectbox("유형", types_list, index=types_list.index(current_type),
+                                            key=f"s_type{key_suffix}", label_visibility="collapsed", on_change=auto_save)
+            with c4:
+                item['title'] = st.text_input("제목", item.get('title',''), key=f"s_title{key_suffix}",
+                                              label_visibility="collapsed", on_change=auto_save)
             with c5:
                 st.write("")
                 if st.button("🗑️", key=f"del_sched{key_suffix}"):
                     schedule.pop(idx)
                     auto_save()
                     st.rerun()
-            item['details'] = st.text_area("세부사항", item.get('details', ''), key=f"s_details{key_suffix}", label_visibility="collapsed", on_change=auto_save)
+            item['details'] = st.text_area("세부사항", item.get('details',''),
+                                           key=f"s_details{key_suffix}", label_visibility="collapsed", on_change=auto_save)
 
 # ========================= 탭4: 업로드 현황 =========================
 with tab4:
@@ -348,49 +435,62 @@ with tab4:
 
         if not filtered:
             st.info("필터 조건에 맞는 콘텐츠가 없습니다.")
-        
-        for content in filtered:
+
+        for row_idx, content in enumerate(filtered):
             content_id = content['id']
             st.markdown("---")
+            # 키 충돌 방지: content_id + row_idx
+            rk = f"{content_id}_{row_idx}"
             k1, k2, k3, k4, k5, k6 = st.columns([0.8, 2.5, 1.2, 1, 0.7, 0.3])
 
-            with k1: st.write(content['date'][5:])
+            with k1:
+                st.write(content['date'][5:])
             with k2:
-                title = f"{content.get('title', '제목 없음')} ({', '.join(content.get('performers',[]))})"
+                title = f"{content.get('title', '제목 없음')} ({', '.join(content.get('performers', []))})"
                 st.write(title)
             with k3:
                 current = st.session_state.upload_status.get(content_id, '촬영전')
                 def on_status_change():
-                    st.session_state.upload_status[content_id] = st.session_state[f"status_{content_id}"]
+                    st.session_state.upload_status[content_id] = st.session_state[f"status_{rk}"]
                     auto_save()
-                st.selectbox("상태", UPLOAD_STATUS_OPTIONS, index=UPLOAD_STATUS_OPTIONS.index(current), key=f"status_{content_id}", label_visibility="collapsed", on_change=on_status_change)
+                st.selectbox("상태", UPLOAD_STATUS_OPTIONS,
+                             index=UPLOAD_STATUS_OPTIONS.index(current),
+                             key=f"status_{rk}", label_visibility="collapsed", on_change=on_status_change)
             with k4:
-                st.date_input("이동 날짜", datetime.strptime(content['date'], '%Y-%m-%d'), key=f"move_date_{content_id}", label_visibility="collapsed")
+                st.date_input("이동 날짜", datetime.strptime(content['date'], '%Y-%m-%d'),
+                              key=f"move_date_{rk}", label_visibility="collapsed")
             with k5:
-                if st.button("이동", key=f"move_btn_{content_id}"):
+                if st.button("이동", key=f"move_btn_{rk}"):
                     old_key = content['date']
-                    new_date = st.session_state[f"move_date_{content_id}"]
+                    new_date = st.session_state[f"move_date_{rk}"]
                     new_key = new_date.strftime('%Y-%m-%d')
                     if old_key != new_key:
-                        moved_content = next((c for c in st.session_state.daily_contents[old_key] if c['id'] == content_id), None)
+                        moved_content = next((c for c in st.session_state.daily_contents.get(old_key, []) if c['id'] == content_id), None)
                         if moved_content:
                             st.session_state.daily_contents[old_key].remove(moved_content)
-                            if not st.session_state.daily_contents[old_key]: del st.session_state.daily_contents[old_key]
-                            if new_key not in st.session_state.daily_contents: st.session_state.daily_contents[new_key] = []
+                            if not st.session_state.daily_contents[old_key]:
+                                del st.session_state.daily_contents[old_key]
+                            if new_key not in st.session_state.daily_contents:
+                                st.session_state.daily_contents[new_key] = []
                             st.session_state.daily_contents[new_key].append(moved_content)
                             auto_save()
                             st.toast(f"✅ {new_key}로 이동", icon='✅'); st.rerun()
             with k6:
-                if st.button("🗑️", key=f"del_upload_{content_id}", help="삭제"):
+                if st.button("🗑️", key=f"del_upload_{rk}", help="삭제"):
+                    # 해당 날짜에서 제거
                     st.session_state.daily_contents[content['date']] = [c for c in st.session_state.daily_contents[content['date']] if c['id'] != content_id]
-                    if not st.session_state.daily_contents[content['date']]: del st.session_state.daily_contents[content['date']]
-                    if content_id in st.session_state.upload_status: del st.session_state.upload_status[content_id]
-                    if content_id in st.session_state.content_props: del st.session_state.content_props[content_id]
+                    if not st.session_state.daily_contents[content['date']]:
+                        del st.session_state.daily_contents[content['date']]
+                    # 상태/소품도 정리
+                    if content_id in st.session_state.upload_status:
+                        del st.session_state.upload_status[content_id]
+                    if content_id in st.session_state.content_props:
+                        del st.session_state.content_props[content_id]
                     auto_save(); st.rerun()
 
         st.divider()
         m1, m2, m3, m4 = st.columns(4)
-        statuses = [st.session_state.upload_status.get(c['id'],'촬영전') for c in filtered]
+        statuses = [st.session_state.upload_status.get(c['id'], '촬영전') for c in filtered]
         with m1: st.metric("필터된 콘텐츠", f"{len(filtered)}개")
         with m2: st.metric("촬영완료", f"{statuses.count('촬영완료')}개")
         with m3: st.metric("편집완료", f"{statuses.count('편집완료')}개")
