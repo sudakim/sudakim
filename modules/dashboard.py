@@ -59,12 +59,12 @@ def _autosize_column_widths(
         }
     if max_px_map is None:
         max_px_map = {
-            "시간": 120,
+            "시간": 100,
             "유형": 110,
             "제목": 360,
             "출연": 260,
-            "소품현황": 800,
-            "최종안": 520,
+            "소품현황": 500,
+            "최종안": 820,
         }
 
     cfg: Dict[str, st.column_config.TextColumn] = {}
