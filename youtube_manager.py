@@ -1,4 +1,5 @@
 # youtube_manager.py
+from modules import dashboard
 import streamlit as st
 import pandas as pd
 from datetime import datetime, time, timedelta
@@ -612,3 +613,4 @@ with tab4:
         with m4: st.metric("업로드완료", f"{statuses.count('업로드완료')}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
