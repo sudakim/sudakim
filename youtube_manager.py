@@ -249,7 +249,8 @@ with tab2:
                         c1,c2,c3,c4,c5 = st.columns([3,2,1,2,1])
                         with c1: p['name'] = st.text_input("소품명", p['name'], key=f"pn_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
                         with c2: p['vendor'] = st.text_input("구매처", p.get('vendor', ''), key=f"pv_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
-                        with c3: p['quantity'] = st.number_input("개수", p.get('quantity', 1), min_value=1, step=1, key=f"pq_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
+                        with c3: qty = int(p.get('quantity', 1)) if str(p.get('quantity', 1)).isdigit() else 1
+                                 p['quantity'] = st.number_input("개수", value=qty, min_value=1, step=1, key=f"pq_{content_id}_{p_idx}", label_visibility="collapsed", on_change=auto_save)
                         with c4:
                             current_status = p.get('status', PROP_STATUS_OPTIONS[0])
                             if current_status not in PROP_STATUS_OPTIONS: current_status = PROP_STATUS_OPTIONS[0]
@@ -384,3 +385,4 @@ with tab4:
         with m4: st.metric("업로드완료", f"{statuses.count('업로드완료')}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
