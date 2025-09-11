@@ -31,7 +31,7 @@ with st.sidebar.expander("🆘 강제 가져오기"):
                 st.session_state["upload_status"]  = data.get("upload_status", {})
                 st.success("세션 주입 완료")
                 storage.autosave_maybe()
-                st.experimental_rerun()
+                st.rerun()
         except Exception as e:
             st.error(f"실패: {e}")
 
@@ -68,4 +68,5 @@ with tab3:
     timetable.render()
 with tab4:
     uploads.render()
+
 
