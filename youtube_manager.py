@@ -211,8 +211,9 @@ if st.session_state.enable_periodic_autosave and callable(getattr(st, "autorefre
             st.session_state["__last_autosave_ts__"] = now_ts
 
 # ------------------------- 탭 -------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"])
-
+dash_tab, tab1, tab2, tab3, tab4 = st.tabs(["🏠 대시보드", "📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"])
+with dash_tab:
+    dashboard.render()
 # ========================= 탭1: 콘텐츠 기획 =========================
 with tab1:
     st.subheader("📝 콘텐츠 기획")
@@ -613,4 +614,5 @@ with tab4:
         with m4: st.metric("업로드완료", f"{statuses.count('업로드완료')}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
 
