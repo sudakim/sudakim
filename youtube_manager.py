@@ -5,35 +5,132 @@ from modules import dashboard, planning, props, timetable, uploads
 import requests, json
 from modules.github_store import _get, _auth_headers
 
-with st.sidebar.expander("🆘 강제 가져오기"):
-    if st.button("youtube_data.json RAW 강제로드"):
+# ===== 🆘 강제 가져오기(원클릭 복구) =====
+# 사이드바 어딘가에 붙이세요 (imports는 블록 안에 포함됨)
+with st.sidebar.expander("🆘 강제 가져오기 (Gist)", expanded=False):
+    import json, requests
+    from datetime import date, datetime
+
+    # secrets 기본값 읽기
+    def _get_secret(name, default=None):
         try:
-            gid = _get("gist_id")
-            hdr = _auth_headers()
-            # Gist 메타
-            meta = requests.get(f"https://api.github.com/gists/{gid}", headers=hdr, timeout=20).json()
-            # youtube_data.json의 raw_url 찾기
-            files = meta.get("files", {})
-            target = None
-            for k,v in files.items():
-                if k.lower() == "youtube_data.json":
-                    target = v
+            return st.secrets.get(name, default)
+        except Exception:
+            return default
+
+    # (1) 입력값
+    _def_gist_id   = _get_secret("gist_id", "")
+    _def_token     = _get_secret("github_token", _get_secret("gh_token", ""))
+    _def_filename  = _get_secret("gist_filename", "youtube_data.json")
+
+    gi = st.text_input("Gist ID", value=_def_gist_id, key="rescue_gist_id")
+    tk = st.text_input("GitHub Token", value=_def_token, type="password", key="rescue_token")
+    fn = st.text_input("파일명", value=_def_filename, key="rescue_filename")
+
+    # (2) 오늘 기준 가장 가까운 날짜 계산(원래 함수가 있으면 그걸 사용, 없으면 로컬 계산)
+    def _nearest_date_from_state():
+        # 앱에 같은 기능 함수가 있으면 우선 사용
+        try:
+            return nearest_content_date_from_today()  # 기존 코드에 있을 때
+        except Exception:
+            pass
+        # Fallback 계산
+        dc = st.session_state.get("daily_contents", {}) or {}
+        days = []
+        for k, items in dc.items():
+            if not items:
+                continue
+            try:
+                days.append(datetime.strptime(k, "%Y-%m-%d").date())
+            except Exception:
+                continue
+        if not days:
+            return date.today()
+        today = date.today()
+        fut = [d for d in sorted(days) if d >= today]
+        return fut[0] if fut else sorted(days)[-1]
+
+    # (3) Gist에서 파일 읽기
+    def _fetch_gist_json(gist_id: str, token: str, filename: str):
+        if not gist_id:
+            raise RuntimeError("Gist ID가 비어 있습니다.")
+        headers = {"Accept": "application/vnd.github+json"}
+        if token:
+            headers["Authorization"] = f"token {token}"
+
+        meta = requests.get(f"https://api.github.com/gists/{gist_id}",
+                            headers=headers, timeout=20)
+        meta.raise_for_status()
+        files = (meta.json() or {}).get("files", {}) or {}
+
+        # 파일명 우선 고정: 입력값 → youtube_data.json → data_store.json
+        pick = None
+        for want in [filename, "youtube_data.json", "data_store.json"]:
+            for k in files.keys():
+                if k.lower() == want.lower():
+                    pick = k
                     break
-            if not target:
-                st.error("youtube_data.json 파일을 찾을 수 없습니다.")
+            if pick:
+                break
+        if not pick:
+            raise RuntimeError("지정한 파일을 Gist에서 찾을 수 없습니다.")
+
+        info = files[pick]
+        if info.get("truncated") and info.get("raw_url"):
+            raw = requests.get(info["raw_url"], timeout=20).text
+            return json.loads(raw)
+        return json.loads(info.get("content", "") or "{}")
+
+    # (4) 세션으로 주입(레거시 키 자동 매핑)
+    def _inject_to_session(payload: dict):
+        st.session_state.setdefault("daily_contents", {})
+        st.session_state.setdefault("content_props", {})
+        st.session_state.setdefault("schedules", {})
+        st.session_state.setdefault("upload_status", {})
+
+        # 레거시 → 현재
+        if "contents" in payload:
+            st.session_state["daily_contents"] = payload["contents"]
+        if "props" in payload:
+            st.session_state["content_props"] = payload["props"]
+        if "schedules" in payload:
+            st.session_state["schedules"] = payload["schedules"]
+        if "upload_status" in payload:
+            st.session_state["upload_status"] = payload["upload_status"]
+
+    # (5) 실행 버튼
+    if st.button("🔧 Gist에서 불러와 적용", use_container_width=True):
+        try:
+            data = _fetch_gist_json(gi.strip(), tk.strip(), fn.strip())
+            if not isinstance(data, dict):
+                st.error("가져온 JSON 형식이 올바르지 않습니다.")
             else:
-                raw = requests.get(target["raw_url"], timeout=20).text
-                data = json.loads(raw)
-                # 레거시 키 -> 세션 주입
-                st.session_state["daily_contents"] = data.get("contents", {})
-                st.session_state["content_props"]  = data.get("props", {})
-                st.session_state["schedules"]      = data.get("schedules", {})
-                st.session_state["upload_status"]  = data.get("upload_status", {})
-                st.success("세션 주입 완료")
-                storage.autosave_maybe()
+                _inject_to_session(data)
+
+                # 기준 날짜 리셋 + 위젯 동기화
+                anchor = _nearest_date_from_state()
+                st.session_state["selected_date"] = anchor
+                # 위젯 키를 쓰는 경우들 동기화(있을 때만)
+                for k in ["content_date_widget", "dashboard_anchor_date", "plan_date", "props_date", "tt_date", "up_date"]:
+                    if k in st.session_state:
+                        st.session_state[k] = anchor
+
+                # 자동 저장(있으면 사용)
+                try:
+                    from modules import storage
+                    storage.autosave_maybe()
+                except Exception:
+                    pass
+
+                st.success("강제가져오기 → 주입 → 날짜리셋 → 저장 완료!")
                 st.rerun()
         except Exception as e:
             st.error(f"실패: {e}")
+
+    # (6) 현재 상태 간단 확인용
+    dc = st.session_state.get("daily_contents", {})
+    st.caption(f"dates: {len(dc)} | first: {list(dc.keys())[:3] if dc else 'None'}")
+
 
 
 st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
@@ -68,5 +165,6 @@ with tab3:
     timetable.render()
 with tab4:
     uploads.render()
+
 
 
