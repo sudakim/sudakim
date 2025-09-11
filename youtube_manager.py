@@ -176,7 +176,7 @@ with tab1:
     with col2:
         num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
     with col3:
-        if st.button("✨ 양식 생성", type="primary"):
+        if st.button("✨ 양식 추가", type="primary"):
             if date_key not in st.session_state.daily_contents: st.session_state.daily_contents[date_key] = []
             current_count = len(st.session_state.daily_contents[date_key])
             for i in range(num_contents):
@@ -391,3 +391,4 @@ with tab4:
         with m4: st.metric("업로드완료", f"{statuses.count('업로드완료')}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
+
