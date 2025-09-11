@@ -1,127 +1,63 @@
-# modules/storage.py
+# modules/github_store.py
 from __future__ import annotations
-import streamlit as st
-import json, os
-from datetime import datetime
-from . import github_store
+import os, json, base64, requests
 
-STORE_PATH = "data_store.json"
-CURRENT_KEYS = ["daily_contents", "content_props", "schedules", "upload_status"]
-LEGACY_MAP = {
-    "contents": "daily_contents",
-    "props": "content_props",
-    "schedules": "schedules",
-    "upload_status": "upload_status",
-    # 과거 다른 이름들까지 커버하려면 여기 추가
-    "contents_by_date": "daily_contents",
-    "props_by_content": "content_props",
-    "timeline_by_date": "schedules",
-    "status_by_content": "upload_status",
-}
-
-def _ensure_defaults():
-    st.session_state.setdefault("daily_contents", {})
-    st.session_state.setdefault("content_props", {})
-    st.session_state.setdefault("schedules", {})
-    st.session_state.setdefault("upload_status", {})
-    st.session_state.setdefault("_autosave", True)
-    st.session_state.setdefault("_last_saved", None)
-    st.session_state.setdefault("_storage_source", None)
-
-def _hydrate(data: dict):
-    if not isinstance(data, dict): 
-        return
-    # 1) 현재 키 채우기
-    for k in CURRENT_KEYS:
-        if k in data:
-            st.session_state[k] = data[k]
-    # 2) 레거시 키 매핑
-    for old, new in LEGACY_MAP.items():
-        if old in data and not st.session_state.get(new):
-            st.session_state[new] = data[old]
-    st.session_state["_last_saved"] = data.get("_last_saved")
-
-def load_state():
-    _ensure_defaults()
-    # A. Gist
+def _get(name: str, default=None):
+    """st.secrets 우선, 없으면 환경변수 조회"""
     try:
-        g = github_store.gist_load()
-        if g:
-            _hydrate(g)
-            st.session_state["_storage_source"] = "gist"
-            return
-    except Exception as e:
-        st.sidebar.warning(f"Gist 로드 실패: {e}")
-    # B. Repo
-    try:
-        r = github_store.repo_load()
-        if r:
-            _hydrate(r)
-            st.session_state["_storage_source"] = "repo"
-            return
-    except Exception as e:
-        st.sidebar.warning(f"Repo 로드 실패: {e}")
-    # C. Local
-    if os.path.exists(STORE_PATH):
-        try:
-            with open(STORE_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            _hydrate(data)
-            st.session_state["_storage_source"] = "local"
-            return
-        except Exception as e:
-            st.sidebar.warning(f"Local 로드 실패: {e}")
+        import streamlit as st
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+    return os.environ.get(name.upper(), default)
 
-def _collect_payload() -> dict:
-    return {
-        "daily_contents": st.session_state.get("daily_contents", {}),
-        "content_props": st.session_state.get("content_props", {}),
-        "schedules": st.session_state.get("schedules", {}),
-        "upload_status": st.session_state.get("upload_status", {}),
-        "_last_saved": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+def _auth_headers():
+    tok = _get("gh_token") or _get("github_token")
+    if not tok:
+        raise RuntimeError("GitHub 토큰(gh_token/github_token)이 설정되어 있지 않습니다.")
+    return {"Authorization": f"token {tok}", "Accept": "application/vnd.github+json"}
 
-def save_state():
-    _ensure_defaults()
-    payload = _collect_payload()
-    src = st.session_state.get("_storage_source")
-    ok = False
-    if src == "gist":
-        try:
-            ok = github_store.gist_save(payload)
-        except Exception as e:
-            st.sidebar.error(f"Gist 저장 실패: {e}")
-    elif src == "repo":
-        try:
-            ok = github_store.repo_save(payload)
-        except Exception as e:
-            st.sidebar.error(f"Repo 저장 실패: {e}")
-    # 출처가 없거나 실패하면 Gist→Repo→Local 순으로 재시도
-    if not ok:
-        try:
-            if github_store.gist_save(payload):
-                ok = True
-                st.session_state["_storage_source"] = "gist"
-        except Exception:
-            pass
-    if not ok:
-        try:
-            if github_store.repo_save(payload):
-                ok = True
-                st.session_state["_storage_source"] = "repo"
-        except Exception:
-            pass
-    if not ok:
-        try:
-            with open(STORE_PATH, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
-            ok = True
-            st.session_state["_storage_source"] = "local"
-        except Exception as e:
-            st.sidebar.error(f"Local 저장 실패: {e}")
-    if ok:
-        st.session_state["_last_saved"] = payload["_last_saved"]
+# -------- Gist --------
+def gist_load():
+    gist_id = _get("gist_id")
+    if not gist_id:
+        return None
+    r = requests.get(f"https://api.github.com/gists/{gist_id}", headers=_auth_headers(), timeout=20)
+    r.raise_for_status()
+    data = r.json()
+    files = data.get("files") or {}
 
-def autosave_maybe():
-    if st.session_state.get("_autosave", True):
-        save_state()
+    # 파일명 선택: secrets.gist_filename > youtube_data.json > data_store.json > 첫 파일
+    prefer = _get("gist_filename")
+    fname = (prefer if prefer and prefer in files else
+             "youtube_data.json" if "youtube_data.json" in files else
+             "data_store.json" if "data_store.json" in files else
+             (next(iter(files.keys()), None) if files else None))
+    if not fname:
+        return None
+
+    meta = files[fname]
+    # 큰 파일이면 raw_url로 다시 읽기
+    if meta.get("truncated") and meta.get("raw_url"):
+        raw = requests.get(meta["raw_url"], timeout=20).text
+        return json.loads(raw)
+    content = meta.get("content", "")
+    return json.loads(content) if content else None
+
+def gist_save(payload: dict):
+    gist_id = _get("gist_id")
+    if not gist_id:
+        return False
+    fname = _get("gist_filename", "youtube_data.json")
+    body = {"files": {fname: {"content": json.dumps(payload, ensure_ascii=False, indent=2)}}}
+    r = requests.patch(f"https://api.github.com/gists/{gist_id}", headers=_auth_headers(), json=body, timeout=20)
+    r.raise_for_status()
+    return True
+
+# -------- Repo (옵션: 사용 안 하면 스텁) --------
+def repo_load():
+    return None
+
+def repo_save(payload: dict):
+    return False
