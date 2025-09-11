@@ -176,7 +176,7 @@ with tab1:
     with col2:
         num_contents = st.number_input("개수", min_value=1, max_value=10, value=3)
     with col3:
-        if st.button("✨ 양식 추가", type="primary"):
+        if st.button("✨ 양식 생성", type="primary"):
             if date_key not in st.session_state.daily_contents: st.session_state.daily_contents[date_key] = []
             current_count = len(st.session_state.daily_contents[date_key])
             for i in range(num_contents):
@@ -222,7 +222,11 @@ with tab2:
 
     if prop_date_key in st.session_state.daily_contents and st.session_state.daily_contents[prop_date_key]:
         for idx, content in enumerate(st.session_state.daily_contents[prop_date_key]):
-            content_id = content.get('id', f"{prop_date_key}_{idx}")
+            # ID가 없는 기존 콘텐츠에 고유 ID 할당
+            if 'id' not in content or not content['id']:
+                import time
+                content['id'] = f"{prop_date_key}_{idx}_{int(time.time())}"
+            content_id = content['id']
             if content_id not in st.session_state.content_props: st.session_state.content_props[content_id] = []
             
             props = st.session_state.content_props[content_id]
@@ -391,4 +395,3 @@ with tab4:
         with m4: st.metric("업로드완료", f"{statuses.count('업로드완료')}개")
     else:
         st.info("아직 등록된 콘텐츠가 없습니다.")
-
