@@ -77,34 +77,33 @@ def render():
     st.markdown("---")
 
     # ===== 양식 추가 라인: 한 줄 정렬(개수 + 버튼 컴팩트) =====
-    a1, a2, a3 = st.columns([1.2, 0.6, 0.5])
-    with a1:
-        st.caption("선택 날짜")
-        st.write(d.strftime("%Y/%m/%d"))
-    with a2:
-        count = st.number_input("개수", min_value=1, max_value=20, value=3, step=1, key="plan_new_count")
-    with a3:
-        st.markdown("<div style='height: 8px'></div>", unsafe_allow_html=True)
-        if st.button("✨ 양식 추가"):
-            st.session_state["daily_contents"].setdefault(dkey, [])
-            base = len(st.session_state["daily_contents"][dkey])
-            for i in range(int(count)):
-                cid = str(uuid.uuid4())[:8]
-                st.session_state["daily_contents"][dkey].append({
-                    "id": cid,
-                    "title": "",
-                    "performers": [],
-                    # 탭용 필드들
-                    "draft": "",
-                    "revision": "",
-                    "feedback": "",
-                    "final": "",
-                    # 참고 링크(줄바꿈 구분)
-                    "reference": "",
-                })
-                st.session_state["upload_status"][cid] = "촬영전"
-            storage.autosave_maybe()
-            st.rerun()
+    a1, a2, a3 = st.columns([1.2, 0.4, 0.6])   # ← 두 번째 칸 비율 줄임
+
+with a1:
+    st.caption("선택 날짜")
+    st.write(d.strftime("%Y/%m/%d"))
+
+with a2:
+    st.caption("개수")
+    count = st.number_input(
+        " ", min_value=1, max_value=20, value=3, step=1,
+        key="plan_new_count", label_visibility="collapsed"
+    )
+
+with a3:
+    if st.button("✨ 양식 추가", use_container_width=True):
+        st.session_state["daily_contents"].setdefault(dkey, [])
+        base = len(st.session_state["daily_contents"][dkey])
+        for i in range(int(count)):
+            cid = str(uuid.uuid4())[:8]
+            st.session_state["daily_contents"][dkey].append({
+                "id": cid, "title": "", "performers": [],
+                "draft": "", "revision": "", "feedback": "", "final": "",
+                "reference": "",
+            })
+            st.session_state["upload_status"][cid] = "촬영전"
+        storage.autosave_maybe()
+        st.rerun()
 
     st.divider()
 
