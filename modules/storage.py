@@ -8,12 +8,10 @@ from . import github_store
 STORE_PATH = "data_store.json"
 CURRENT_KEYS = ["daily_contents", "content_props", "schedules", "upload_status"]
 LEGACY_MAP = {
-    # 원래 코드 호환
     "contents": "daily_contents",
     "props": "content_props",
     "schedules": "schedules",
     "upload_status": "upload_status",
-    # 과거 다른 이름들까지 커버 가능
     "contents_by_date": "daily_contents",
     "props_by_content": "content_props",
     "timeline_by_date": "schedules",
@@ -30,14 +28,11 @@ def _ensure_defaults():
     st.session_state.setdefault("_storage_source", None)
 
 def _hydrate(data: dict):
-    """레거시 키를 현재 키로 매핑하여 세션에 주입"""
     if not isinstance(data, dict):
         return
-    # 현재 키 우선 주입
     for k in CURRENT_KEYS:
         if k in data:
             st.session_state[k] = data[k]
-    # 레거시 → 현재 매핑
     for old, new in LEGACY_MAP.items():
         if old in data and not st.session_state.get(new):
             st.session_state[new] = data[old]
@@ -57,18 +52,7 @@ def load_state():
     except Exception as e:
         st.sidebar.warning(f"Gist 로드 실패: {e}")
 
-    # B. Repo (함수 있을 때만)
-    try:
-        if hasattr(github_store, "repo_load"):
-            r = github_store.repo_load()
-            if r:
-                _hydrate(r)
-                st.session_state["_storage_source"] = "repo"
-                return
-    except Exception as e:
-        st.sidebar.warning(f"Repo 로드 실패: {e}")
-
-    # C. Local
+    # B. Local
     if os.path.exists(STORE_PATH):
         try:
             with open(STORE_PATH, "r", encoding="utf-8") as f:
@@ -92,20 +76,13 @@ def save_state():
     _ensure_defaults()
     payload = _collect_payload()
 
-    src = st.session_state.get("_storage_source")
     ok = False
-    if src == "gist" and hasattr(github_store, "gist_save"):
+    if st.session_state.get("_storage_source") == "gist" and hasattr(github_store, "gist_save"):
         try:
             ok = github_store.gist_save(payload)
         except Exception as e:
             st.sidebar.error(f"Gist 저장 실패: {e}")
-    elif src == "repo" and hasattr(github_store, "repo_save"):
-        try:
-            ok = github_store.repo_save(payload)
-        except Exception as e:
-            st.sidebar.error(f"Repo 저장 실패: {e}")
 
-    # 출처 없거나 실패 → Gist → Repo → Local 순 재시도
     if not ok and hasattr(github_store, "gist_save"):
         try:
             if github_store.gist_save(payload):
@@ -113,13 +90,7 @@ def save_state():
                 st.session_state["_storage_source"] = "gist"
         except Exception:
             pass
-    if not ok and hasattr(github_store, "repo_save"):
-        try:
-            if github_store.repo_save(payload):
-                ok = True
-                st.session_state["_storage_source"] = "repo"
-        except Exception:
-            pass
+
     if not ok:
         try:
             with open(STORE_PATH, "w", encoding="utf-8") as f:
