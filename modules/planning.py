@@ -2,15 +2,16 @@ from __future__ import annotations
 import streamlit as st
 from datetime import datetime, date
 import uuid
+from typing import List
 from modules import storage
 from .ui import nearest_anchor_date_today, to_datestr
 
 # ---------- 내부 유틸 ----------
 
-def _collect_days() -> list[date]:
+def _collect_days() -> List[date]:
     """콘텐츠가 하나라도 있는 날짜만 수집해 정렬"""
     dc = st.session_state.get("daily_contents", {}) or {}
-    days = []
+    days: List[date] = []
     for k, v in dc.items():
         if not v:
             continue
@@ -76,34 +77,41 @@ def render():
 
     st.markdown("---")
 
-    # ===== 양식 추가 라인: 한 줄 정렬(개수 + 버튼 컴팩트) =====
-    a1, a2, a3 = st.columns([1.2, 0.4, 0.6])   # ← 두 번째 칸 비율 줄임
+    # ===== 양식 추가 라인: 한 줄 정렬(개수 박스 폭 ↓ + 버튼 컴팩트) =====
+    a1, a2, a3 = st.columns([1.2, 0.4, 0.6], gap="small")   # ← 두 번째 칸 비율 줄임
 
-with a1:
-    st.caption("선택 날짜")
-    st.write(d.strftime("%Y/%m/%d"))
+    with a1:
+        st.caption("선택 날짜")
+        st.write(d.strftime("%Y/%m/%d"))
 
-with a2:
-    st.caption("개수")
-    count = st.number_input(
-        " ", min_value=1, max_value=20, value=3, step=1,
-        key="plan_new_count", label_visibility="collapsed"
-    )
+    with a2:
+        # 라벨 숨김 + 가로폭 줄여서 버튼과 한 줄 정렬
+        count = st.number_input(
+            label="개수", min_value=1, max_value=20, value=3, step=1,
+            key="plan_new_count", label_visibility="collapsed"
+        )
 
-with a3:
-    if st.button("✨ 양식 추가", use_container_width=True):
-        st.session_state["daily_contents"].setdefault(dkey, [])
-        base = len(st.session_state["daily_contents"][dkey])
-        for i in range(int(count)):
-            cid = str(uuid.uuid4())[:8]
-            st.session_state["daily_contents"][dkey].append({
-                "id": cid, "title": "", "performers": [],
-                "draft": "", "revision": "", "feedback": "", "final": "",
-                "reference": "",
-            })
-            st.session_state["upload_status"][cid] = "촬영전"
-        storage.autosave_maybe()
-        st.rerun()
+    with a3:
+        if st.button("✨ 양식 추가", use_container_width=True, key="btn_add_templates"):
+            st.session_state["daily_contents"].setdefault(dkey, [])
+            base = len(st.session_state["daily_contents"][dkey])
+            for i in range(int(count)):
+                cid = str(uuid.uuid4())[:8]
+                st.session_state["daily_contents"][dkey].append({
+                    "id": cid,
+                    "title": "",
+                    "performers": [],
+                    # 탭용 필드들
+                    "draft": "",
+                    "revision": "",
+                    "feedback": "",
+                    "final": "",
+                    # 참고 링크(줄바꿈 구분)
+                    "reference": "",
+                })
+                st.session_state["upload_status"][cid] = "촬영전"
+            storage.autosave_maybe()
+            st.rerun()
 
     st.divider()
 
@@ -167,5 +175,4 @@ with a3:
             with tab4:
                 c["final"] = st.text_area("최종안", value=c.get("final",""), height=160, key=f"final_{cid}")
 
-            # 텍스트 변경은 주기 저장으로 충분하지만, 원하면 즉시 저장 버튼도 제공
             st.caption("텍스트 변경은 주기 저장으로 자동 반영됩니다.")
