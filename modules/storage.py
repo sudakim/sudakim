@@ -44,43 +44,41 @@ def _hydrate_from_dict(data: dict):
         if old in data:
             st.session_state[new] = data[old]
 
+# modules/storage.py (load_state만 교체)
 def load_state():
-    """로드 우선순위: Gist → Repo → local file"""
     _ensure_defaults()
-
     # A. Gist
     try:
         g = github_store.gist_load()
         if g:
-            _hydrate_from_dict(g)
+            _hydrate(g)
             st.session_state["_storage_source"] = "gist"
-            st.session_state["_last_saved"] = g.get("_last_saved")
             return
     except Exception as e:
         st.sidebar.warning(f"Gist 로드 실패: {e}")
 
-    # B. Repo file
+    # B. Repo (함수 존재할 때만 시도)
     try:
-        r = github_store.repo_load()
-        if r:
-            _hydrate_from_dict(r)
-            st.session_state["_storage_source"] = "repo"
-            st.session_state["_last_saved"] = r.get("_last_saved")
-            return
+        if hasattr(github_store, "repo_load"):
+            r = github_store.repo_load()
+            if r:
+                _hydrate(r)
+                st.session_state["_storage_source"] = "repo"
+                return
     except Exception as e:
         st.sidebar.warning(f"Repo 로드 실패: {e}")
 
-    # C. Local file
+    # C. Local
     if os.path.exists(STORE_PATH):
         try:
             with open(STORE_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            _hydrate_from_dict(data)
+            _hydrate(data)
             st.session_state["_storage_source"] = "local"
-            st.session_state["_last_saved"] = data.get("_last_saved")
             return
         except Exception as e:
-            st.sidebar.warning(f"로컬 로드 실패: {e}")
+            st.sidebar.warning(f"Local 로드 실패: {e}")
+
 
 def _collect_payload() -> dict:
     return {
