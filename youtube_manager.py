@@ -2,6 +2,39 @@
 import streamlit as st
 from modules import storage
 from modules import dashboard, planning, props, timetable, uploads
+import requests, json
+from modules.github_store import _get, _auth_headers
+
+with st.sidebar.expander("🆘 강제 가져오기"):
+    if st.button("youtube_data.json RAW 강제로드"):
+        try:
+            gid = _get("gist_id")
+            hdr = _auth_headers()
+            # Gist 메타
+            meta = requests.get(f"https://api.github.com/gists/{gid}", headers=hdr, timeout=20).json()
+            # youtube_data.json의 raw_url 찾기
+            files = meta.get("files", {})
+            target = None
+            for k,v in files.items():
+                if k.lower() == "youtube_data.json":
+                    target = v
+                    break
+            if not target:
+                st.error("youtube_data.json 파일을 찾을 수 없습니다.")
+            else:
+                raw = requests.get(target["raw_url"], timeout=20).text
+                data = json.loads(raw)
+                # 레거시 키 -> 세션 주입
+                st.session_state["daily_contents"] = data.get("contents", {})
+                st.session_state["content_props"]  = data.get("props", {})
+                st.session_state["schedules"]      = data.get("schedules", {})
+                st.session_state["upload_status"]  = data.get("upload_status", {})
+                st.success("세션 주입 완료")
+                storage.autosave_maybe()
+                st.experimental_rerun()
+        except Exception as e:
+            st.error(f"실패: {e}")
+
 
 st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
 
@@ -35,3 +68,4 @@ with tab3:
     timetable.render()
 with tab4:
     uploads.render()
+
