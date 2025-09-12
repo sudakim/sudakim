@@ -13,30 +13,30 @@ import time
 # 🎨 색상 테마 정의
 COLOR_THEMES = {
     "modern": {
-        "primary": "#FF6B6B",
-        "secondary": "#4ECDC4", 
-        "accent": "#45B7D1",
-        "background": "#F8F9FA",
+        "primary": "#DC2626",      # 더 진한 빨강으로 대비 향상
+        "secondary": "#059669",    # 더 진한 초록으로 가독성 향상
+        "accent": "#1D4ED8",       # 더 진한 파랑으로 명확한 강조
+        "background": "#F9FAFB",   # 더 밝은 배경
         "surface": "#FFFFFF",
-        "text_primary": "#2C3E50",
-        "text_secondary": "#7F8C8D",
-        "success": "#27AE60",
-        "warning": "#F39C12",
-        "error": "#E74C3C",
-        "border": "#E9ECEF"
+        "text_primary": "#111827", # 매우 진한 텍스트로 최대 대비
+        "text_secondary": "#4B5563", # 충분히 진한 보조 텍스트
+        "success": "#059669",
+        "warning": "#D97706", 
+        "error": "#DC2626",
+        "border": "#D1D5DB"        # 명확한 테두리
     },
     "dark": {
         "primary": "#FF6B6B",
         "secondary": "#4ECDC4",
-        "accent": "#45B7D1", 
-        "background": "#1A1A2E",
-        "surface": "#16213E",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#B0B0B0",
-        "success": "#2ECC71",
-        "warning": "#F39C12",
-        "error": "#E74C3C",
-        "border": "#2C3E50"
+        "accent": "#A29BFE",       
+        "background": "#1E293B",   # 더 부드러운 다크 배경
+        "surface": "#334155",      # 더 밝은 서페이스로 대비 향상
+        "text_primary": "#FFFFFF", # 순백색으로 최대 대비
+        "text_secondary": "#E2E8F0", # 매우 밝은 보조 텍스트
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "error": "#EF4444",
+        "border": "#475569"        # 더 명확한 테두리
     }
 }
 
@@ -59,24 +59,69 @@ class ThemeManager:
         self.colors = COLOR_THEMES[self.current_theme]
     
     def apply_theme(self):
-        """현재 테마를 Streamlit에 적용"""
+        """현재 테마를 Streamlit에 적용 - 강제 색상 적용"""
         theme_css = f"""
         <style>
-        /* 전체 페이지 스타일 */
+        /* 전체 페이지 스타일 - 브라우저 설정 무시 */
         .stApp {{
-            background-color: {self.colors["background"]};
-            color: {self.colors["text_primary"]};
+            background-color: {self.colors["background"]} !important;
+            color: {self.colors["text_primary"]} !important;
+        }}
+        
+        /* 모든 텍스트 요소 강제 가시성 보장 */
+        .main .block-container * {{
+            color: {self.colors["text_primary"]} !important;
+        }}
+        
+        /* Streamlit 기본 텍스트 강제 스타일링 */
+        .stMarkdown, .stMarkdown p, .stMarkdown div, .stMarkdown span {{
+            color: {self.colors["text_primary"]} !important;
+        }}
+        
+        /* 정보 박스 텍스트 강제 스타일링 */
+        .stInfo, .stInfo p, .stInfo div {{
+            color: {self.colors["text_primary"]} !important;
+            background-color: {self.colors["surface"]} !important;
+            border: 1px solid {self.colors["primary"]} !important;
+        }}
+        
+        .stSuccess, .stSuccess p, .stSuccess div {{
+            color: {self.colors["text_primary"]} !important;
+            background-color: {self.colors["surface"]} !important;
+            border: 1px solid {self.colors["success"]} !important;
+        }}
+        
+        .stWarning, .stWarning p, .stWarning div {{
+            color: {self.colors["text_primary"]} !important;
+            background-color: {self.colors["surface"]} !important;
+            border: 1px solid {self.colors["warning"]} !important;
+        }}
+        
+        .stError, .stError p, .stError div {{
+            color: {self.colors["text_primary"]} !important;
+            background-color: {self.colors["surface"]} !important;
+            border: 1px solid {self.colors["error"]} !important;
+        }}
+        
+        /* 캡션 및 보조 텍스트 */
+        .caption, .stCaption {{
+            color: {self.colors["text_secondary"]} !important;
         }}
         
         /* 카드 스타일 */
         .content-card {{
-            background-color: {self.colors["surface"]};
+            background-color: {self.colors["surface"]} !important;
+            color: {self.colors["text_primary"]} !important;
             border-radius: 12px;
             padding: 20px;
             margin: 10px 0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             border: 1px solid {self.colors["border"]};
             transition: all 0.3s ease;
+        }}
+        
+        .content-card * {{
+            color: {self.colors["text_primary"]} !important;
         }}
         
         .content-card:hover {{
@@ -86,38 +131,49 @@ class ThemeManager:
         
         /* 버튼 스타일 */
         .stButton > button {{
-            background-color: {self.colors["primary"]};
-            color: white;
-            border-radius: 8px;
-            border: none;
-            padding: 8px 16px;
-            font-weight: 500;
-            transition: all 0.2s ease;
+            background-color: {self.colors["primary"]} !important;
+            color: white !important;
+            border-radius: 8px !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
         }}
         
         .stButton > button:hover {{
-            background-color: {self.colors["secondary"]};
-            transform: translateY(-1px);
+            background-color: {self.colors["secondary"]} !important;
+            transform: translateY(-1px) !important;
         }}
         
         /* 상태 뱃지 */
         .status-badge {{
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            margin: 2px;
+            display: inline-block !important;
+            padding: 4px 12px !important;
+            border-radius: 20px !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            margin: 2px !important;
+            color: white !important;
         }}
         
         /* 헤더 스타일 */
         .section-header {{
-            color: {self.colors["primary"]};
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid {self.colors["primary"]};
+            color: {self.colors["primary"]} !important;
+            font-size: 24px !important;
+            font-weight: 600 !important;
+            margin-bottom: 20px !important;
+            padding-bottom: 10px !important;
+            border-bottom: 2px solid {self.colors["primary"]} !important;
+        }}
+        
+        /* 데이터프레임 텍스트 가시성 */
+        .stDataFrame {{
+            background-color: {self.colors["surface"]} !important;
+            color: {self.colors["text_primary"]} !important;
+        }}
+        
+        .stDataFrame * {{
+            color: {self.colors["text_primary"]} !important;
         }}
         </style>
         """
@@ -237,55 +293,65 @@ def _render_compact_card(item: Dict):
     </div>
     """, unsafe_allow_html=True)
 
-def modern_sidebar():
-    """모던한 사이드바"""
-    theme = ThemeManager()
+def simple_sidebar():
+    """크롬 다크모드에 반응하는 간단한 사이드바"""
     
     with st.sidebar:
-        # 헤더
-        st.markdown(f"""
-        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, 
-                    {theme.colors['primary']}, {theme.colors['secondary']});
-                    border-radius: 12px; margin-bottom: 20px;">
-            <h2 style="color: white; margin: 0;">🎬 유튜브 관리</h2>
-            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">콘텐츠 매니저</p>
+        # 헤더 - 크롬 다크모드에 반응하는 디자인
+        st.markdown("""
+        <div style="text-align: center; padding: 24px; 
+                    background: linear-gradient(135deg, #DC2626, #1D4ED8);
+                    border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+            <h2 style="color: white; margin: 0; font-weight: 700; font-size: 1.5em;">🎬 유튜브 관리</h2>
+            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 0.9em;">콘텐츠 매니저</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # 테마 선택
-        theme_choice = st.selectbox(
-            "🎨 테마 선택",
-            ["modern", "dark"],
-            index=0 if theme.current_theme == "modern" else 1,
-            key="theme_selector"
-        )
+        # 간단한 안내 메시지
+        st.info("💡 이 앱은 크롬의 라이트/다크 모드 설정에 자동으로 반응합니다.")
         
-        if theme_choice != theme.current_theme:
-            st.session_state.theme = theme_choice
-            st.rerun()
+        # 네비게이션 섹션
+        st.markdown("### 🧭 빠른 네비게이션")
         
-        # 네비게이션
-        st.markdown("### 🧭 네비게이션")
-        
+        # 퀵 액션 버튼들
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📊 통계", use_container_width=True, type="secondary"):
+                st.session_state.selected_tab = "dashboard"
+        with col2:
+            if st.button("📝 기획", use_container_width=True, type="secondary"):
+                st.session_state.selected_tab = "planning"
+                
         # 통계 카드
         stats = _get_dashboard_stats()
-        st.markdown(f"""
-        <div style="background-color: {theme.colors['surface']}; padding: 15px; 
-                    border-radius: 8px; border: 1px solid {theme.colors['border']}; margin: 10px 0;">
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                <span>전체 콘텐츠</span>
-                <span style="font-weight: bold; color: {theme.colors['primary']};">{stats['total']}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                <span>완료됨</span>
-                <span style="font-weight: bold; color: {theme.colors['success']};">{stats['completed']}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                <span>진행중</span>
-                <span style="font-weight: bold; color: {theme.colors['warning']};">{stats['in_progress']}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        
+        st.markdown("### 📊 현황 통계")
+        
+        # 간단한 메트릭 표시
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("전체", stats['total'])
+            st.metric("완료", stats['completed'])
+        with col2:
+            completion_rate = (stats['completed'] / max(stats['total'], 1)) * 100
+            st.metric("완료율", f"{completion_rate:.1f}%")
+            st.metric("진행중", stats['in_progress'])
+        
+        # 도움말 섹션
+        with st.expander("💡 도움말", expanded=False):
+            st.markdown("""
+            **사용법:**
+            - 📝 **콘텐츠 기획**: 새로운 콘텐츠 아이디어 추가
+            - 🛍️ **소품 구매**: 필요한 소품 관리
+            - ⏰ **타임테이블**: 촬영 일정 관리
+            - 📹 **업로드 현황**: 진행 상황 추적
+            
+            **테마 설정:**
+            크롬 → 설정 → 모양 → 테마에서 라이트/다크 모드를 변경할 수 있습니다.
+            """)
+            
+        st.markdown("---")
+        st.caption("🎨 크롬 다크모드 설정에 따라 자동으로 테마가 변경됩니다")
 
 def _get_dashboard_stats() -> Dict[str, int]:
     """대시보드 통계 계산"""
