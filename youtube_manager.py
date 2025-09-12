@@ -239,90 +239,51 @@ setInterval(applyTheme, 1000);
 </script>
 
 <style>
-/* 🔥 기본 테마 설정 (JavaScript와 함께 동작) 🔥 */
+/* 🔥 극강 CSS - 무조건 적용 🔥 */
 
-/* 🌞 라이트모드 (기본) */
-:root {
-    --bg-color: #FFFFFF;
-    --text-color: #000000;
-    --surface-color: #F3F4F6;
-    --border-color: #D1D5DB;
+/* 라이트모드 기본값 */
+html, body, #root, .stApp, .main, .main > div, .block-container,
+section[data-testid="main"], [data-testid="stAppViewContainer"], 
+.element-container, .stMarkdown, div, span, p, h1, h2, h3, h4, h5, h6 {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
 }
 
-[data-theme="dark"] {
-    --bg-color: #1F2937;
-    --text-color: #FFFFFF;
-    --surface-color: #374151;
-    --border-color: #6B7280;
-}
-
-/* 🔥 강력한 CSS 적용 - JavaScript 백업용 🔥 */
-html, body, .stApp {
-    background-color: var(--bg-color) !important;
-    color: var(--text-color) !important;
-}
-
-/* 메인 콘텐츠 영역 강제 스타일 */
-.main, .main .block-container {
-    background-color: var(--bg-color) !important;
-    color: var(--text-color) !important;
-}
-
-/* 모든 텍스트 요소 강제 색상 */
-* {
-    color: var(--text-color) !important;
-}
-
-/* 사이드바 강제 스타일 */
-section[data-testid="stSidebar"], 
-section[data-testid="stSidebar"] * {
-    background-color: var(--surface-color) !important;
-    color: var(--text-color) !important;
-}
-
-/* 정보박스 강제 스타일 */
-.stInfo, .stInfo *, 
-.stSuccess, .stSuccess *, 
-.stWarning, .stWarning *, 
-.stError, .stError * {
-    color: var(--text-color) !important;
-    background-color: var(--surface-color) !important;
-}
-
-/* 버튼 스타일 유지 */
-.stButton > button {
-    color: #FFFFFF !important;
-    background-color: #DC2626 !important;
-}
-
-/* 입력 필드 */
-.stTextInput input, .stTextArea textarea, .stSelectbox select {
-    color: var(--text-color) !important;
-    background-color: var(--surface-color) !important;
-    border: 1px solid var(--border-color) !important;
-}
-
-/* 🔥 Media Query 백업 (이중 보장) 🔥 */
+/* 🔥 다크모드 강제 적용 🔥 */
 @media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #1F2937;
-        --text-color: #FFFFFF;
-        --surface-color: #374151;
-        --border-color: #6B7280;
-    }
-    
-    html, body, .stApp, .main, .main .block-container {
+    html, body, #root, .stApp, .main, .main > div, .block-container,
+    section[data-testid="main"], [data-testid="stAppViewContainer"], 
+    .element-container, .stMarkdown, div, span, p, h1, h2, h3, h4, h5, h6 {
         background-color: #1F2937 !important;
         color: #FFFFFF !important;
     }
     
+    /* 모든 텍스트 요소 강제 흰색 */
     * {
         color: #FFFFFF !important;
     }
     
+    /* 모든 배경 요소 강제 다크 */
+    *, *::before, *::after {
+        background-color: #1F2937 !important;
+    }
+    
+    /* 사이드바는 조금 더 어둡게 */
     section[data-testid="stSidebar"], 
     section[data-testid="stSidebar"] * {
         background-color: #374151 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 정보박스들 */
+    .stInfo, .stSuccess, .stWarning, .stError {
+        background-color: #374151 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 버튼만 예외 */
+    .stButton > button {
+        background-color: #DC2626 !important;
         color: #FFFFFF !important;
     }
 }
