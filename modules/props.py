@@ -4,25 +4,21 @@ import streamlit as st
 import pandas as pd
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 from modules import storage
-from .ui_enhanced import ThemeManager, STATUS_STYLES, success_animation
+
+# 간단한 상태 정보 (아이콘만)
+STATUS_ICONS = {
+    "예정": "⏳",
+    "주문완료": "📦", 
+    "수령완료": "✅"
+}
 
 def render():
     """
-    개선된 소품 관리 인터페이스
-    모던한 카드 디자인과 함께 개선된 사용자 경험 제공
+    간단하고 깔끔한 소품 관리 인터페이스
     """
-    # 테마 적용
-    theme = ThemeManager()
-    theme.apply_theme()
-    
-    # 모던한 헤더
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, {theme.colors['secondary']}, {theme.colors['accent']}); 
-                padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
-        <h2 style="color: white; margin: 0;">🛍️ 소품 구매 관리</h2>
-        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">콘텐츠별 소품 현황</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # 간단한 헤더
+    st.title("🛍️ 소품 구매 관리")
+    st.markdown("---")
 
     d = date_picker_with_toggle("📅 날짜 선택", key="props", default=nearest_anchor_date_today())
     dkey = to_datestr(d)
@@ -55,86 +51,73 @@ def render():
                     if name.strip():  # 소품명이 비어있지 않은 경우만
                         items.append({"name": name, "vendor": vendor, "quantity": qty, "status": status})
                         storage.autosave_maybe()
-                        success_animation("소품이 추가되었습니다!")
+                        st.success("소품이 추가되었습니다!")
                         st.rerun()
 
                 # 등록된 소품 목록
                 if items:
                     st.markdown("#### 📋 등록된 소품")
                     for j, p in enumerate(items):
-                        status_info = STATUS_STYLES.get(p.get('status', '예정'), {})
-                        status_badge = f"""
-                        <span class="status-badge" style="background-color: {status_info.get('bg_color', '#EBF5FB')}; 
-                              color: {status_info.get('color', '#E74C3C')}; 
-                              border: 1px solid {status_info.get('color', '#E74C3C')}; margin: 2px;">
-                            {status_info.get('icon', '🔴')} {p.get('status', '예정')}
-                        </span>
-                        """
-                        st.markdown(f"**{j+1}.** {p.get('name', '')} | {p.get('vendor', '')} | {p.get('quantity', 1)}개 | {status_badge}", unsafe_allow_html=True)
+                        status_icon = STATUS_ICONS.get(p.get('status', '예정'), '⏳')
+                        st.markdown(f"**{j+1}.** {p.get('name', '')} | {p.get('vendor', '')} | {p.get('quantity', 1)}개 | {status_icon} {p.get('status', '예정')}")
                 else:
                     st.info("등록된 소품이 없습니다.")
 
     # 소품 요약 섹션
     st.markdown("---")
-    st.markdown(f"### 📊 {d.strftime('%m월 %d일')} 소품 현황")
+    st.header(f"📊 {d.strftime('%m월 %d일')} 소품 현황")
     
-    # 간단한 테이블 형태로 소품 현황 표시
+    # 전체 소품 데이터를 한 번에 수집하여 간단한 표로 표시
+    all_props = []
+    total_count = 0
+    completed_count = 0
+    
     for i, c in enumerate(contents):
         cid = c.get("id")
         items = st.session_state.get("content_props", {}).get(cid, [])
+        content_title = c.get('title', f'콘텐츠 #{i+1}')
         
-        # 콘텐츠 제목과 요약 정보
-        st.subheader(f"📋 #{i+1}. {c.get('title', '(제목 없음)')}")
-        
-        if items:
-            # 데이터 검증 및 정리
-            clean_items = []
-            for p in items:
-                name = str(p.get('name', '')).strip()
-                vendor = str(p.get('vendor', '')).strip()
-                quantity = p.get('quantity', 1)
-                status = p.get('status', '예정')
-                
-                # 빈 값이나 이상한 문자 필터링
-                if not name or name in ['ㅇ', 'ㅇㅇ', ''] or len(name.strip()) < 1:
-                    continue
-                    
+        for p in items:
+            name = str(p.get('name', '')).strip()
+            vendor = str(p.get('vendor', '')).strip()
+            quantity = p.get('quantity', 1)
+            status = p.get('status', '예정')
+            
+            # 유효한 데이터만 포함
+            if name and name not in ['ㅇ', 'ㅇㅇ', ''] and len(name.strip()) >= 1:
                 # 특수문자 정리
                 name = name.replace(']', '').replace('[', '').strip()
-                vendor = vendor.replace(']', '').replace('[', '').strip()
-                
-                # 빈 vendor는 '기타'로 설정
-                if not vendor:
-                    vendor = '기타'
+                vendor = vendor.replace(']', '').replace('[', '').strip() or '기타'
                 
                 # 상태 아이콘 추가
-                status_info = STATUS_STYLES.get(status, {})
-                status_display = f"{status_info.get('icon', '🔴')} {status}"
+                status_icon = STATUS_ICONS.get(status, '⏳')
                 
-                clean_items.append({
+                all_props.append({
+                    '콘텐츠': content_title,
                     '소품명': name,
                     '구매처': vendor,
-                    '수량': f"{quantity}개",
-                    '상태': status_display
+                    '수량': quantity,
+                    '상태': f"{status_icon} {status}"
                 })
-            
-            if clean_items:
-                # 요약 정보
-                total_items = sum(int(item['수량'].replace('개', '')) for item in clean_items)
-                completed_items = len([item for item in clean_items if '수령완료' in item['상태']])
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("전체 소품", f"{total_items}개")
-                with col2:
-                    st.metric("수령완료", f"{completed_items}개")
-                
-                # 간단한 테이블로 표시
-                df = pd.DataFrame(clean_items)
-                st.dataframe(df, use_container_width=True, hide_index=True)
-            else:
-                st.info("유효한 소품 정보가 없습니다.")
-        else:
-            st.info("등록된 소품이 없습니다.")
+                total_count += quantity
+                if status == '수령완료':
+                    completed_count += quantity
+    
+    if all_props:
+        # 요약 통계
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("전체 소품", f"{total_count}개")
+        with col2:
+            st.metric("수령완료", f"{completed_count}개")
+        with col3:
+            progress = (completed_count / total_count * 100) if total_count > 0 else 0
+            st.metric("완료율", f"{progress:.1f}%")
         
-        st.markdown("---")
+        # 간단한 테이블로 모든 소품 표시
+        df = pd.DataFrame(all_props)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+    else:
+        st.info("📌 등록된 소품이 없습니다.")
