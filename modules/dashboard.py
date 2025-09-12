@@ -6,10 +6,19 @@ from typing import Dict, Any, List
 
 # UI 유틸: 달력 토글(기본 OFF), 오늘 기준 가장 가까운 날짜, 날짜 문자열 변환, 소품 상태 마커
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
-from .ui_enhanced import (
-    modern_card, modern_grid, 
-    loading_animation, success_animation, STATUS_STYLES
-)
+# UI 컴포넌트들을 간단하게 대체
+# modern_card, modern_grid 등의 복잡한 UI 컴포넌트 사용 안 함
+
+# 간단한 상태 아이콘
+SIMPLE_STATUS_ICONS = {
+    "촬영전": "🎬",
+    "촬영완료": "✅", 
+    "편집완료": "✂️",
+    "업로드완료": "🚀",
+    "예정": "⏳",
+    "주문완료": "📦",
+    "수령완료": "📋"
+}
 
 
 def _props_summary_for_content(cid: str | None) -> str:
@@ -91,30 +100,15 @@ def render():
     completed_count = sum(1 for c in daily 
                          if st.session_state.get("upload_status", {}).get(c.get("id")) == "업로드완료")
     
-    # 통계 카드
+    # 통계 카드 (간단한 metrics로 대체)
     col1, col2, col3 = st.columns(3)
     with col1:
-        modern_card(
-            title="총 콘텐츠",
-            content=f"**{total_content}**개",
-            status=None,
-            expandable=False
-        )
+        st.metric("총 콘텐츠", f"{total_content}개")
     with col2:
-        modern_card(
-            title="완료됨",
-            content=f"**{completed_count}**개",
-            status="업로드완료",
-            expandable=False
-        )
+        st.metric("완료됨", f"{completed_count}개")
     with col3:
         completion_rate = f"{(completed_count/total_content*100):.1f}%" if total_content > 0 else "0%"
-        modern_card(
-            title="완료율",
-            content=f"**{completion_rate}**",
-            status=None,
-            expandable=False
-        )
+        st.metric("완료율", completion_rate)
 
     # 표 데이터 빌드
     rows: List[Dict[str, Any]] = []
@@ -139,16 +133,10 @@ def render():
                         final_like = _final_or_draft_preview(c)
                         break
 
-            # 상태 뱃지
+            # 상태 아이콘 (간단하게)
             upload_status = st.session_state.get("upload_status", {}).get(cid, "촬영전")
-            status_info = STATUS_STYLES.get(upload_status, {})
-            status_badge = f"""
-            <span class="status-badge" style="background-color: {status_info.get('bg_color', '#EBF5FB')}; 
-                  color: {status_info.get('color', '#3498DB')}; 
-                  border: 1px solid {status_info.get('color', '#3498DB')}; margin: 2px;">
-                {status_info.get('icon', '🔵')} {upload_status}
-            </span>
-            """.strip()
+            status_icon = SIMPLE_STATUS_ICONS.get(upload_status, "🔵")
+            status_badge = f"{status_icon} {upload_status}"
 
             rows.append(
                 {
@@ -166,14 +154,8 @@ def render():
         for c in daily:
             cid = c.get("id")
             upload_status = st.session_state.get("upload_status", {}).get(cid, "촬영전")
-            status_info = STATUS_STYLES.get(upload_status, {})
-            status_badge = f"""
-            <span class="status-badge" style="background-color: {status_info.get('bg_color', '#EBF5FB')}; 
-                  color: {status_info.get('color', '#3498DB')}; 
-                  border: 1px solid {status_info.get('color', '#3498DB')}; margin: 2px;">
-                {status_info.get('icon', '🔵')} {upload_status}
-            </span>
-            """.strip()
+            status_icon = SIMPLE_STATUS_ICONS.get(upload_status, "🔵")
+            status_badge = f"{status_icon} {upload_status}"
             
             rows.append(
                 {
