@@ -165,49 +165,120 @@ with st.sidebar:
     st.caption(f"💾 소스: {src}")
     st.caption(f"🕒 최종 저장: {when}")
 
-# 🔥 강력한 CSS - 모든 모드에서 텍스트 완벽하게 보이도록 강제 설정 🔥
+# 🔥 JavaScript + CSS 강력한 다크모드 감지 및 강제 적용 🔥
 st.markdown("""
+<script>
+// 🔥 강력한 다크모드 감지 및 실시간 적용 🔥
+function applyTheme() {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const stApp = document.querySelector('.stApp');
+    const main = document.querySelector('.main');
+    
+    if (isDark) {
+        // 🌙 다크모드 강제 적용
+        if (stApp) {
+            stApp.style.setProperty('background-color', '#1F2937', 'important');
+            stApp.style.setProperty('color', '#FFFFFF', 'important');
+        }
+        if (main) {
+            main.style.setProperty('background-color', '#1F2937', 'important');
+            main.style.setProperty('color', '#FFFFFF', 'important');
+        }
+        document.documentElement.setAttribute('data-theme', 'dark');
+        
+        // 모든 텍스트 요소를 흰색으로 강제 설정
+        document.querySelectorAll('*').forEach(el => {
+            if (el.tagName !== 'BUTTON') {
+                el.style.setProperty('color', '#FFFFFF', 'important');
+            }
+        });
+    } else {
+        // 🌞 라이트모드 강제 적용
+        if (stApp) {
+            stApp.style.setProperty('background-color', '#FFFFFF', 'important');
+            stApp.style.setProperty('color', '#000000', 'important');
+        }
+        if (main) {
+            main.style.setProperty('background-color', '#FFFFFF', 'important');
+            main.style.setProperty('color', '#000000', 'important');
+        }
+        document.documentElement.setAttribute('data-theme', 'light');
+        
+        // 모든 텍스트 요소를 검은색으로 강제 설정
+        document.querySelectorAll('*').forEach(el => {
+            if (el.tagName !== 'BUTTON') {
+                el.style.setProperty('color', '#000000', 'important');
+            }
+        });
+    }
+}
+
+// 페이지 로드 시 즉시 적용
+applyTheme();
+
+// 다크모드 변경 감지하여 실시간 적용
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
+// DOM 변경 감지하여 새로운 요소에도 적용
+const observer = new MutationObserver(applyTheme);
+observer.observe(document.body, { childList: true, subtree: true });
+
+// 주기적으로도 체크 (보험용)
+setInterval(applyTheme, 1000);
+</script>
+
 <style>
-/* =================================================
-   🌟 라이트모드 기본 설정 (Chrome 기본 상태)
-   ================================================= */
-.stApp {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
+/* 🔥 기본 테마 설정 (JavaScript와 함께 동작) 🔥 */
+
+/* 🌞 라이트모드 (기본) */
+:root {
+    --bg-color: #FFFFFF;
+    --text-color: #000000;
+    --surface-color: #F3F4F6;
+    --border-color: #D1D5DB;
 }
 
-/* 🔥 모든 텍스트 요소 강제 검은색 (라이트모드) 🔥 */
+[data-theme="dark"] {
+    --bg-color: #1F2937;
+    --text-color: #FFFFFF;
+    --surface-color: #374151;
+    --border-color: #6B7280;
+}
+
+/* 🔥 강력한 CSS 적용 - JavaScript 백업용 🔥 */
+html, body, .stApp {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+}
+
+/* 메인 콘텐츠 영역 강제 스타일 */
+.main, .main .block-container {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+}
+
+/* 모든 텍스트 요소 강제 색상 */
 * {
-    color: #000000 !important;
+    color: var(--text-color) !important;
 }
 
-.main .block-container * {
-    color: #000000 !important;
+/* 사이드바 강제 스타일 */
+section[data-testid="stSidebar"], 
+section[data-testid="stSidebar"] * {
+    background-color: var(--surface-color) !important;
+    color: var(--text-color) !important;
 }
 
-/* 사이드바 모든 텍스트 강제 검은색 */
-.stSidebar * {
-    color: #000000 !important;
-}
-
-/* Streamlit 기본 컴포넌트들 */
-.stMarkdown, .stMarkdown *, 
-.stText, .stText *,
-.stCaption, .stCaption *,
-div, span, p, h1, h2, h3, h4, h5, h6 {
-    color: #000000 !important;
-}
-
-/* 정보박스들 */
+/* 정보박스 강제 스타일 */
 .stInfo, .stInfo *, 
 .stSuccess, .stSuccess *, 
 .stWarning, .stWarning *, 
 .stError, .stError * {
-    color: #000000 !important;
-    background-color: #F3F4F6 !important;
+    color: var(--text-color) !important;
+    background-color: var(--surface-color) !important;
 }
 
-/* 버튼 텍스트 */
+/* 버튼 스타일 유지 */
 .stButton > button {
     color: #FFFFFF !important;
     background-color: #DC2626 !important;
@@ -215,62 +286,33 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
 
 /* 입력 필드 */
 .stTextInput input, .stTextArea textarea, .stSelectbox select {
-    color: #000000 !important;
-    background-color: #FFFFFF !important;
-    border: 1px solid #D1D5DB !important;
+    color: var(--text-color) !important;
+    background-color: var(--surface-color) !important;
+    border: 1px solid var(--border-color) !important;
 }
 
-/* =================================================
-   🌙 다크모드 설정 (Chrome 다크모드일 때)
-   ================================================= */
+/* 🔥 Media Query 백업 (이중 보장) 🔥 */
 @media (prefers-color-scheme: dark) {
-    .stApp {
+    :root {
+        --bg-color: #1F2937;
+        --text-color: #FFFFFF;
+        --surface-color: #374151;
+        --border-color: #6B7280;
+    }
+    
+    html, body, .stApp, .main, .main .block-container {
         background-color: #1F2937 !important;
         color: #FFFFFF !important;
     }
     
-    /* 🔥 다크모드에서 모든 텍스트 강제 흰색 🔥 */
     * {
         color: #FFFFFF !important;
     }
     
-    .main .block-container * {
-        color: #FFFFFF !important;
-    }
-    
-    /* 사이드바 모든 텍스트 강제 흰색 */
-    .stSidebar * {
-        color: #FFFFFF !important;
-    }
-    
-    /* Streamlit 기본 컴포넌트들 다크모드 */
-    .stMarkdown, .stMarkdown *, 
-    .stText, .stText *,
-    .stCaption, .stCaption *,
-    div, span, p, h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF !important;
-    }
-    
-    /* 정보박스들 다크모드 */
-    .stInfo, .stInfo *, 
-    .stSuccess, .stSuccess *, 
-    .stWarning, .stWarning *, 
-    .stError, .stError * {
-        color: #FFFFFF !important;
+    section[data-testid="stSidebar"], 
+    section[data-testid="stSidebar"] * {
         background-color: #374151 !important;
-    }
-    
-    /* 버튼은 계속 적색배경+흰글씨 */
-    .stButton > button {
         color: #FFFFFF !important;
-        background-color: #DC2626 !important;
-    }
-    
-    /* 입력 필드 다크모드 */
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        color: #FFFFFF !important;
-        background-color: #374151 !important;
-        border: 1px solid #6B7280 !important;
     }
 }
 
