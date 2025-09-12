@@ -55,7 +55,6 @@ def _sync_schedule_details_from_planning(dkey: str) -> bool:
             want = _final_or_draft_preview(by_id[cid])
             if (s.get("details") or "") != want:
                 s["details"] = want
-                # 제목 동기화(있으면)
                 if by_id[cid].get("title"):
                     s["title"] = by_id[cid]["title"]
                 changed = True
@@ -219,7 +218,7 @@ def render():
                 s["details"] = new_details
                 _sort_schedules_inplace(dkey)
                 storage.autosave_maybe()
-                st.experimental_rerun()
+                st.rerun()
 
     # 하단 요약 테이블(읽기용)
     st.markdown("---")
