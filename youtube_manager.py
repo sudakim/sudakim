@@ -285,26 +285,6 @@ div, span, p, h1, h2, h3, h4, h5, h6 {
     }
 }
 </style>
-""")
-}
-
-/* 콘텐츠가 있는 날짜 마커 스타일 */
-.fc-event {
-    border-radius: 4px !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
-}
-
-.fc-event-title {
-    font-weight: bold !important;
-}
-
-/* 더 명확한 마커 표시 */
-.fc-daygrid-event {
-    margin: 1px !important;
-    border-radius: 3px !important;
-}
-</style>
 """, unsafe_allow_html=True)
 
 # 탭 구성
