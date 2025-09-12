@@ -55,7 +55,7 @@ def _sync_schedule_details_from_planning(dkey: str) -> bool:
             want = _final_or_draft_preview(by_id[cid])
             if (s.get("details") or "") != want:
                 s["details"] = want
-                # 제목/출연 동기화(제목만 기본 적용)
+                # 제목 동기화(있으면)
                 if by_id[cid].get("title"):
                     s["title"] = by_id[cid]["title"]
                 changed = True
@@ -100,13 +100,11 @@ def render():
         if st.button("◀ 이전", use_container_width=True, disabled=not days):
             prev = [d for d in days if d < sel]
             st.session_state["tt_nav"] = prev[-1] if prev else (days[0] if days else sel)
-            st.session_state["tt_nav"] = st.session_state.get("tt_nav", sel)
             st.rerun()
     with c3:
         if st.button("다음 ▶", use_container_width=True, disabled=not days):
             nxt = [d for d in days if d > sel]
             st.session_state["tt_nav"] = nxt[0] if nxt else (days[-1] if days else sel)
-            st.session_state["tt_nav"] = st.session_state.get("tt_nav", sel)
             st.rerun()
 
     # 동기화: content 변경 시 details 업데이트
@@ -126,14 +124,14 @@ def render():
         with t2:
             end_t   = st.time_input("종료", value=_parse_time("13:30"), key="tt_add_end")
 
-        typ = st.selectbox("유형", ["촬영", "회의", "이동", "기타"], index=0, key="tt_add_type")
+        type_options = ["촬영", "회의", "이동", "기타"]
+        typ = st.selectbox("유형", type_options, index=0, key="tt_add_type")
 
         cid: Optional[str] = None
         title: str = ""
         details: str = ""
 
         if mode == "콘텐츠에서 선택":
-            # 해당 날짜의 콘텐츠 목록
             contents = st.session_state.get("daily_contents", {}).get(dkey, []) or []
             options = [f"#{i+1}. {c.get('title','제목없음')}" for i, c in enumerate(contents)]
             idx = st.selectbox("콘텐츠", options=options if options else ["(없음)"], index=0 if options else None, key="tt_add_select")
@@ -173,6 +171,8 @@ def render():
         return
 
     st.caption("🔁 항목을 수정하면 즉시 저장되고, 시간 수정 시 자동으로 순서가 재정렬됩니다.")
+    type_options = ["촬영", "회의", "이동", "기타"]
+
     for i, s in enumerate(list(schedules)):  # copy for safe iteration
         with st.expander(f"{s.get('start','--:--')}~{s.get('end','--:--')} · {s.get('title','(제목없음)')}", expanded=False):
             r1c1, r1c2, r1c3, r1c4 = st.columns([1,1,1.2,0.6])
@@ -181,7 +181,12 @@ def render():
             with r1c2:
                 new_end = st.time_input("종료", value=_parse_time(s.get("end","00:00")), key=f"tt_end_{i}")
             with r1c3:
-                new_type = st.selectbox("유형", ["촬영", "회의", "이동", "기타"], index=["촬영","회의","이동","기타"].index(s.get("type","촬영")), key=f"tt_type_{i}")
+                cur_type = s.get("type", "촬영")
+                try:
+                    idx_type = type_options.index(cur_type)
+                except ValueError:
+                    idx_type = 0  # 옵션에 없으면 기본 '촬영'
+                new_type = st.selectbox("유형", type_options, index=idx_type, key=f"tt_type_{i}")
             with r1c4:
                 # 삭제
                 st.write("")
@@ -195,10 +200,7 @@ def render():
             with t1:
                 new_title = st.text_input("표시 제목", value=s.get("title",""), key=f"tt_title_{i}")
             with t2:
-                # cid가 있으면 기획안과 연동(읽기Only로 하고 싶으면 disabled=True)
-                link_info = ""
-                if s.get("cid"):
-                    link_info = " (기획안 연동)"
+                link_info = " (기획안 연동)" if s.get("cid") else ""
                 new_details = st.text_area(f"세부{link_info}", value=s.get("details",""), height=110, key=f"tt_details_{i}")
 
             # 변경 감지 → 저장 및 정렬
@@ -217,13 +219,12 @@ def render():
                 s["details"] = new_details
                 _sort_schedules_inplace(dkey)
                 storage.autosave_maybe()
-                st.experimental_rerun()  # 변경 반영 및 정렬 갱신
+                st.experimental_rerun()
 
     # 하단 요약 테이블(읽기용)
     st.markdown("---")
     import pandas as pd
     df = pd.DataFrame(st.session_state["schedules"][dkey])
-    # 보기 좋게 content_id → cid, details 그대로
     if "cid" in df.columns:
         df.rename(columns={"cid":"content_id"}, inplace=True)
     st.dataframe(df, use_container_width=True, hide_index=True)
