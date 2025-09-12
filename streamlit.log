@@ -1,0 +1,181 @@
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://169.254.0.21:8501
+  External URL: http://104.199.125.191:8501
+
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mdashboard.py[0m[1m:[0m[1m167[0m                                          [91m [0m
+[91m [0m             <span [33mclass[0m=[32m"status[0m[32m-badge"[0m [33mstyle[0m=[35m"background[0m-color: [1m{[0m[1;35mSTATUS_STYLES.get[0m[1m([0mu [91m [0m
+[91m [0m                                              [1;91m▲[0m                                       [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mSyntaxError: [0munterminated string literal [1m([0mdetected at line [1;36m167[0m[1m)[0m
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mdashboard.py[0m[1m:[0m[1m167[0m                                          [91m [0m
+[91m [0m             <span [33mclass[0m=[32m"status[0m[32m-badge"[0m [33mstyle[0m=[35m"background[0m-color: [1m{[0m[1;35mSTATUS_STYLES.get[0m[1m([0mu [91m [0m
+[91m [0m                                              [1;91m▲[0m                                       [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mSyntaxError: [0munterminated string literal [1m([0mdetected at line [1;36m167[0m[1m)[0m
+  Stopping...
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://169.254.0.21:8501
+  External URL: http://104.199.125.191:8501
+
+  Stopping...
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://169.254.0.21:8501
+  External URL: http://104.199.125.191:8501
+
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mdashboard.py[0m[1m:[0m[1m169[0m                                          [91m [0m
+[91m [0m             <span [33mclass[0m=[32m"status[0m[32m-badge"[0m [33mstyle[0m=[35m"background[0m-color: [1m{[0m[1;35mSTATUS_STYLES.get[0m[1m([0mu [91m [0m
+[91m [0m                                              [1;91m▲[0m                                       [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mSyntaxError: [0munterminated string literal [1m([0mdetected at line [1;36m169[0m[1m)[0m
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mdashboard.py[0m[1m:[0m[1m155[0m                                          [91m [0m
+[91m [0m             [32m""[0m"[1;35m.strip[0m[1m([0m[1m)[0m                                                              [91m [0m
+[91m [0m             [1;91m▲[0m                                                                        [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mSyntaxError: [0munterminated triple-quoted string literal [1m([0mdetected at line [1;36m251[0m[1m)[0m
+  Stopping...
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://169.254.0.21:8501
+  External URL: http://104.199.125.191:8501
+
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mprops.py[0m[1m:[0m[1m105[0m                                              [91m [0m
+[91m [0m                 [1m<[0m[1;95mdiv[0m[39m [0m[33mstyle[0m[39m=[0m[32m"padding[0m[32m: 8px; margin: 4px 0; background-color: rgba[0m[32m([0m[32m0,0,[0m [91m [0m
+[91m [0m                [1;91m▲[0m                                                                     [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mIndentationError: [0munexpected indent
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/home/user/webapp/[0m[1myoutube_manager.py[0m:4 in <module>                                   [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m  1 [0m[2m# youtube_manager.py (상단)[0m                                                    [31m [0m
+[31m [0m   [2m  2 [0m[94mimport[0m[90m [0m[4;96mstreamlit[0m[90m [0m[94mas[0m[90m [0m[4;96mst[0m                                                         [31m [0m
+[31m [0m   [2m  3 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[90m [0m[94mimport[0m storage                                                    [31m [0m
+[31m [0m [31m❱ [0m  4 [1;4;94mfrom[0m[1;4;90m [0m[1;4;96mmodules[0m[1;4;90m [0m[1;4;94mimport[0m[1;4m dashboard, planning, props, timetable, uploads[0m             [31m [0m
+[31m [0m   [2m  5 [0m[94mimport[0m[90m [0m[4;96mrequests[0m,[90m [0m[4;96mjson[0m                                                          [31m [0m
+[31m [0m   [2m  6 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mgithub_store[0m[90m [0m[94mimport[0m _get, _auth_headers                           [31m [0m
+[31m [0m   [2m  7 [0m[94mfrom[0m[90m [0m[4;96mmodules[0m[4;96m.[0m[4;96mui_enhanced[0m[90m [0m[94mimport[0m ThemeManager, modern_sidebar                   [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[91m [0m [2m /home/user/webapp/modules/[0m[1mprops.py[0m[1m:[0m[1m105[0m                                              [91m [0m
+[91m [0m                 [1m<[0m[1;95mdiv[0m[39m [0m[33mstyle[0m[39m=[0m[32m"padding[0m[32m: 8px; margin: 4px 0; background-color: rgba[0m[32m([0m[32m0,0,[0m [91m [0m
+[91m [0m                [1;91m▲[0m                                                                     [91m [0m
+[91m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mIndentationError: [0munexpected indent

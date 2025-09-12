@@ -3,7 +3,12 @@ from __future__ import annotations
 import streamlit as st
 from datetime import date, datetime
 from typing import List
+from .ui_enhanced import (
+    ThemeManager, modern_card, modern_grid, modern_sidebar,
+    loading_animation, success_animation, error_animation, STATUS_STYLES
+)
 
+# 기존 UI 유틸리티 유지 (하위호환성)
 DOT = {"예정":"🔴","주문완료":"🟡","수령완료":"🟢"}
 STATE_DOT = {"촬영전":"🔵","촬영완료":"🟡","편집완료":"🟠","업로드완료":"🟢"}
 
@@ -53,10 +58,13 @@ def _fullcalendar(selected: date, key: str) -> date:
 
 def date_picker_with_toggle(title: str, key: str, default: date | None = None) -> date:
     """
-    - 기본은 숨김(토글 OFF)
-    - 오늘 기준 가장 가까운 날짜를 기본 선택
-    - 이전/다음 버튼으로 콘텐츠 있는 날짜만 이동
+    개선된 날짜 선택기 with 토글
+    모던한 디자인과 함께 개선된 사용자 경험 제공
     """
+    # 테마 적용
+    theme = ThemeManager()
+    theme.apply_theme()
+    
     days = collect_content_dates()
     anchor = default or nearest_anchor_date_today()
     sel_key = f"{key}_selected"
@@ -64,20 +72,29 @@ def date_picker_with_toggle(title: str, key: str, default: date | None = None) -
     st.session_state.setdefault(sel_key, anchor)
     selected = st.session_state[sel_key]
 
-    st.markdown(f"**{title}**")
-    c1, c2, c3, c4 = st.columns([0.25,0.25,0.25,0.25])
+    # 모던한 헤더 스타일
+    st.markdown(f"""
+    <div style="background-color: {theme.colors['surface']}; 
+                padding: 15px; border-radius: 12px; 
+                border: 1px solid {theme.colors['border']}; 
+                margin: 10px 0;">
+        <h4 style="color: {theme.colors['primary']}; margin: 0 0 10px 0;">{title}</h4>
+    """, unsafe_allow_html=True)
+    
+    # 모던한 버튼 레이아웃
+    c1, c2, c3, c4 = st.columns([0.3, 0.4, 0.15, 0.15])
     with c1:
-        show = st.toggle("📅 달력 표시", value=False, key=f"{key}_toggle")
+        show = st.toggle("📅 달력", value=False, key=f"{key}_toggle")
     with c2:
-        st.caption(selected.strftime("%Y/%m/%d"))
+        st.caption(f"📅 {selected.strftime('%Y년 %m월 %d일')}")
     with c3:
-        if st.button("◀ 이전", key=f"{key}_prev", use_container_width=True, disabled=not days):
+        if st.button("◀", key=f"{key}_prev", use_container_width=True, disabled=not days):
             if days:
                 i = max(0, next((idx for idx,d in enumerate(days) if d>=selected), len(days))-1)
                 st.session_state[sel_key] = days[i-1] if i>0 else days[0]
                 selected = st.session_state[sel_key]
     with c4:
-        if st.button("다음 ▶", key=f"{key}_next", use_container_width=True, disabled=not days):
+        if st.button("▶", key=f"{key}_next", use_container_width=True, disabled=not days):
             if days:
                 i = next((idx for idx,d in enumerate(days) if d>selected), None)
                 st.session_state[sel_key] = days[i] if i is not None else days[-1]
@@ -87,4 +104,8 @@ def date_picker_with_toggle(title: str, key: str, default: date | None = None) -
         selected = _fullcalendar(selected, key)
 
     st.session_state[sel_key] = selected
+    
+    # 닫는 태그
+    st.markdown("</div>", unsafe_allow_html=True)
+    
     return selected
