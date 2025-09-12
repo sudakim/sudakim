@@ -26,26 +26,28 @@ def _props_summary_for_content(cid: str | None) -> str:
     return f"소품 {len(items)}개 · " + ", ".join(parts)
 
 
-def _preview(text: str, max_lines: int = 3) -> str:
-    """최대 N줄까지 줄바꿈 유지하여 미리보기"""
+def _preview(text: str, max_lines: int = None) -> str:
+    """전체 텍스트를 줄바꿈 유지하여 반환 (max_lines가 None이면 모든 줄)"""
     if not text:
         return ""
     lines = [ln.strip() for ln in str(text).splitlines()]
-    lines = [ln for ln in lines if ln][:max_lines]
+    lines = [ln for ln in lines if ln]
+    if max_lines is not None:
+        lines = lines[:max_lines]
     return "\n".join(lines)
 
 
 def _final_or_draft_preview(content: Dict[str, Any]) -> str:
     """
-    최종안이 있으면 최종안, 없으면 (초안) + 초안 미리보기 반환.
+    최종안이 있으면 최종안 전체, 없으면 (초안) + 초안 전체 내용 반환.
     """
     final_txt = content.get("final", "") or ""
     if final_txt.strip():
-        return _preview(final_txt)
+        return _preview(final_txt)  # 전체 최종안 내용
 
     draft_txt = content.get("draft", "") or ""
     if draft_txt.strip():
-        return "(초안) " + _preview(draft_txt)
+        return "(초안) " + _preview(draft_txt)  # 전체 초안 내용
     return ""
 
 
@@ -208,7 +210,8 @@ def render():
             column_config={
                 "제목": st.column_config.TextColumn("제목", width=200),
                 "상태": st.column_config.TextColumn("상태", width=100),
-                "최종안": st.column_config.TextColumn("최종안", width=150),
+                "최종안": st.column_config.TextColumn("최종안", width=200, 
+                                                     help="최종안이 없으면 초안 내용이 표시됩니다"),
             },
         )
     else:
@@ -224,7 +227,8 @@ def render():
                 "출연": st.column_config.TextColumn("👥 출연", width=100),
                 "상태": st.column_config.TextColumn("📊 상태", width=100),
                 "소품현황": st.column_config.TextColumn("🛍️ 소품현황", width=200),
-                "최종안": st.column_config.TextColumn("📝 최종안", width=150),
+                "최종안": st.column_config.TextColumn("📝 최종안", width=300, 
+                                                     help="최종안이 없으면 초안 내용이 표시됩니다"),
             },
         )
 
@@ -240,3 +244,6 @@ def render():
             st.metric(label="편집 완료", value=len([r for r in rows if "편집완료" in r["상태"]]))
         with col4:
             st.metric(label="업로드 완료", value=len([r for r in rows if "업로드완료" in r["상태"]]))
+
+    # 최종안/초안 표시 안내
+    st.info("💡 **최종안 컬럼**: 최종안이 있으면 전체 내용을 표시하고, 없으면 '(초안)' 표시와 함께 초안 전체 내용을 표시합니다.")
