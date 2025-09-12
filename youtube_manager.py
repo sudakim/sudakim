@@ -165,262 +165,127 @@ with st.sidebar:
     st.caption(f"💾 소스: {src}")
     st.caption(f"🕒 최종 저장: {when}")
 
-# 크롬 다크모드에 반응하는 간단한 색상 시스템
+# 🔥 강력한 CSS - 모든 모드에서 텍스트 완벽하게 보이도록 강제 설정 🔥
 st.markdown("""
 <style>
-/* 기본 라이트 모드 스타일 */
+/* =================================================
+   🌟 라이트모드 기본 설정 (Chrome 기본 상태)
+   ================================================= */
 .stApp {
-    background-color: #FFFFFF;
-    color: #1F2937;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
 }
 
-/* 모든 텍스트 요소 기본 스타일 */
-.main .block-container {
-    color: #1F2937;
+/* 🔥 모든 텍스트 요소 강제 검은색 (라이트모드) 🔥 */
+* {
+    color: #000000 !important;
 }
 
-.stMarkdown, .stMarkdown p, .stMarkdown div, .stMarkdown span {
-    color: #1F2937;
+.main .block-container * {
+    color: #000000 !important;
 }
 
-.stInfo, .stSuccess, .stWarning, .stError {
-    color: #1F2937;
+/* 사이드바 모든 텍스트 강제 검은색 */
+.stSidebar * {
+    color: #000000 !important;
 }
 
-.caption, .stCaption {
-    color: #6B7280;
+/* Streamlit 기본 컴포넌트들 */
+.stMarkdown, .stMarkdown *, 
+.stText, .stText *,
+.stCaption, .stCaption *,
+div, span, p, h1, h2, h3, h4, h5, h6 {
+    color: #000000 !important;
 }
 
-/* 입력 필드 기본 스타일 */
-.stTextInput > div > div > input {
-    background-color: white;
-    border: 1px solid #D1D5DB;
-    color: #1F2937;
+/* 정보박스들 */
+.stInfo, .stInfo *, 
+.stSuccess, .stSuccess *, 
+.stWarning, .stWarning *, 
+.stError, .stError * {
+    color: #000000 !important;
+    background-color: #F3F4F6 !important;
 }
 
-.stTextInput label {
-    color: #1F2937;
-    font-weight: 500;
-}
-
-/* 날짜 선택기 스타일 */
-.stDateInput > div > div > input {
-    background-color: white;
-    border: 1px solid #D1D5DB;
-    color: #1F2937;
-}
-
-.stDateInput label {
-    color: #1F2937;
-    font-weight: 500;
-}
-
-/* 선택박스 스타일 */
-.stSelectbox > div > div > div {
-    background-color: white;
-    border: 1px solid #D1D5DB;
-    color: #1F2937;
-}
-
-.stSelectbox label {
-    color: #1F2937;
-    font-weight: 500;
-}
-
-/* 체크박스 및 토글 스타일 */
-.stCheckbox label, .stToggle label {
-    color: #1F2937;
-    font-weight: 500;
-}
-
-/* 사이드바 스타일 개선 - 다크 테마 적용 */
-section[data-testid="stSidebar"] {
-    background-color: #2C3E50 !important;
-}
-
-section[data-testid="stSidebar"] .stMarkdown {
-    color: white !important;
-}
-
-section[data-testid="stSidebar"] .stSelectbox label {
-    color: white !important;
-}
-
-section[data-testid="stSidebar"] .stTextInput label {
-    color: white !important;
-}
-
-section[data-testid="stSidebar"] .stButton button {
+/* 버튼 텍스트 */
+.stButton > button {
+    color: #FFFFFF !important;
     background-color: #DC2626 !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
 }
 
-section[data-testid="stSidebar"] .stToggle label {
-    color: white !important;
+/* 입력 필드 */
+.stTextInput input, .stTextArea textarea, .stSelectbox select {
+    color: #000000 !important;
+    background-color: #FFFFFF !important;
+    border: 1px solid #D1D5DB !important;
 }
 
-section[data-testid="stSidebar"] .stCheckbox label {
-    color: white !important;
-}
-
-/* 크롬 다크모드 감지 및 자동 대응 */
+/* =================================================
+   🌙 다크모드 설정 (Chrome 다크모드일 때)
+   ================================================= */
 @media (prefers-color-scheme: dark) {
     .stApp {
-        background-color: #1F2937;
-        color: #F9FAFB;
+        background-color: #1F2937 !important;
+        color: #FFFFFF !important;
     }
     
-    .main .block-container {
-        background-color: #1F2937;
-        color: #F9FAFB;
+    /* 🔥 다크모드에서 모든 텍스트 강제 흰색 🔥 */
+    * {
+        color: #FFFFFF !important;
     }
     
-    .stMarkdown, .stMarkdown p, .stMarkdown div, .stMarkdown span {
-        color: #F9FAFB;
+    .main .block-container * {
+        color: #FFFFFF !important;
     }
     
-    .stInfo, .stSuccess, .stWarning, .stError {
-        color: #F9FAFB;
-        background-color: #374151;
+    /* 사이드바 모든 텍스트 강제 흰색 */
+    .stSidebar * {
+        color: #FFFFFF !important;
     }
     
-    .caption, .stCaption {
-        color: #D1D5DB;
+    /* Streamlit 기본 컴포넌트들 다크모드 */
+    .stMarkdown, .stMarkdown *, 
+    .stText, .stText *,
+    .stCaption, .stCaption *,
+    div, span, p, h1, h2, h3, h4, h5, h6 {
+        color: #FFFFFF !important;
     }
     
-    /* 다크모드 입력 필드 */
-    .stTextInput > div > div > input,
-    .stDateInput > div > div > input,
-    .stSelectbox > div > div > div {
-        background-color: #374151;
-        border: 1px solid #4B5563;
-        color: #F9FAFB;
+    /* 정보박스들 다크모드 */
+    .stInfo, .stInfo *, 
+    .stSuccess, .stSuccess *, 
+    .stWarning, .stWarning *, 
+    .stError, .stError * {
+        color: #FFFFFF !important;
+        background-color: #374151 !important;
     }
     
-    .stTextInput label,
-    .stDateInput label,
-    .stSelectbox label,
-    .stCheckbox label,
-    .stToggle label {
-        color: #F9FAFB;
+    /* 버튼은 계속 적색배경+흰글씨 */
+    .stButton > button {
+        color: #FFFFFF !important;
+        background-color: #DC2626 !important;
     }
     
-    /* 다크모드 카드 스타일 */
-    .content-card {
-        background-color: #374151;
-        color: #F9FAFB;
-        border-color: #4B5563;
+    /* 입력 필드 다크모드 */
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        color: #FFFFFF !important;
+        background-color: #374151 !important;
+        border: 1px solid #6B7280 !important;
     }
 }
 
-/* 탭 스타일 개선 */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: white;
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* 🔥 추가 강화: 탭 및 기타 컴포넌트 색상 보장 🔥 */
+.stTabs [data-baseweb="tab-list"] button {
+    color: #000000 !important;
 }
 
-.stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    padding: 12px 20px;
-    font-weight: 500;
-    border: none;
-    font-size: 16px;
-    transition: all 0.3s ease;
+@media (prefers-color-scheme: dark) {
+    .stTabs [data-baseweb="tab-list"] button {
+        color: #FFFFFF !important;
+    }
 }
-
-.stTabs [aria-selected="true"] {
-    background-color: #FF6B6B;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
-}
-
-.stTabs [aria-selected="false"] {
-    background-color: #f8f9fa;
-    color: #666;
-}
-
-.stTabs [aria-selected="false"]:hover {
-    background-color: #e9ecef;
-    transform: translateY(-1px);
-}
-
-/* 데이터프레임 스타일 개선 */
-.stDataFrame {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* 메인 콘텐츠 영역 */
-.main .block-container {
-    padding-top: 2rem;
-    max-width: 100%;
-}
-
-/* 카드 스타일 */
-.element-container div[data-stale="false"] {
-    background-color: white;
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 0.5rem 0;
-}
-
-/* 메트릭 카드 개선 */
-[data-testid="metric-container"] {
-    background-color: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border: 1px solid #e9ecef;
-}
-
-/* 달력 스타일 개선 */
-.fc {
-    background-color: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-    border: 1px solid #D1D5DB !important;
-    overflow: hidden !important;
-}
-
-.fc-header-toolbar {
-    background-color: #F9FAFB !important;
-    padding: 16px !important;
-    border-bottom: 1px solid #D1D5DB !important;
-}
-
-.fc-button-primary {
-    background-color: #DC2626 !important;
-    border-color: #DC2626 !important;
-    color: white !important;
-    border-radius: 8px !important;
-    font-weight: 500 !important;
-}
-
-.fc-button-primary:hover {
-    background-color: #B91C1C !important;
-    border-color: #B91C1C !important;
-}
-
-.fc-day-today {
-    background-color: rgba(220, 38, 38, 0.1) !important;
-}
-
-.fc-daygrid-day-number {
-    color: #111827 !important;
-    font-weight: 500 !important;
-}
-
-.fc-col-header-cell {
-    background-color: #F3F4F6 !important;
-    color: #374151 !important;
-    font-weight: 600 !important;
+</style>
+""")
 }
 
 /* 콘텐츠가 있는 날짜 마커 스타일 */
