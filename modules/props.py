@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 from modules import storage
-from .ui_enhanced import ThemeManager, modern_card, STATUS_STYLES, success_animation
+from .ui_enhanced import ThemeManager, STATUS_STYLES, success_animation
 
 def render():
     """
@@ -83,40 +83,61 @@ def render():
         items = st.session_state.get("content_props", {}).get(cid, [])
         
         # 콘텐츠별 소품 요약 카드
-        card_content = '''
-        <div style="margin: 10px 0;">
-        '''
-        
         if items:
             total_items = sum(p.get('quantity', 1) for p in items)
             completed_items = len([p for p in items if p.get('status') == '수령완료'])
             
-            card_content += '''
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span>총 {total}개</span>
-                <span style="color: {success_color};">완료: {completed}개</span>
-            </div>
-            '''.format(total=total_items, completed=completed_items, success_color=theme.colors['success'])
+            # 소품 목록 HTML 생성
+            items_html = ""
             for p in items:
-                status_info = STATUS_STYLES.get(p.get('status', '예정'), {})
-                card_content += f"""
+                # 🔍 데이터 검증 및 정리
+                name = str(p.get('name', '')).strip()
+                vendor = str(p.get('vendor', '')).strip()
+                quantity = p.get('quantity', 1)
+                status = p.get('status', '예정')
+                
+                # 빈 값이나 이상한 문자 필터링
+                if not name or name in ['ㅇ', 'ㅇㅇ', ''] or len(name.strip()) < 1:
+                    continue
+                    
+                # 특수문자 정리 (] 같은 잘못된 문자 제거)
+                name = name.replace(']', '').replace('[', '').strip()
+                vendor = vendor.replace(']', '').replace('[', '').strip()
+                
+                # 빈 vendor는 '기타'로 설정
+                if not vendor:
+                    vendor = '기타'
+                    
+                status_info = STATUS_STYLES.get(status, {})
+                items_html += f"""
                 <div style="padding: 8px; margin: 4px 0; background-color: rgba(0,0,0,0.05); border-radius: 6px;">
-                    <strong>{p.get('name', '')}</strong> | {p.get('vendor', '')} | {p.get('quantity', 1)}개
-                    <span class="status-badge" style="background-color: {status_info.get('bg_color', '#EBF5FB')}; 
-                          color: {status_info.get('color', '#E74C3C')}; 
-                          border: 1px solid {status_info.get('color', '#E74C3C')}; margin-left: 8px;">
-                        {status_info.get('icon', '🔴')} {p.get('status', '예정')}
+                    <strong>{name}</strong> | {vendor} | {quantity}개
+                    <span style="background-color: {status_info.get('bg_color', '#EBF5FB')}; color: {status_info.get('color', '#E74C3C')}; border: 1px solid {status_info.get('color', '#E74C3C')}; margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">
+                        {status_info.get('icon', '🔴')} {status}
                     </span>
                 </div>
                 """
+            
+            # 전체 카드 HTML 생성
+            st.markdown(f"""
+            <div style="background-color: white; border-radius: 12px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #D1D5DB;">
+                <h4 style="color: #DC2626; margin: 0 0 15px 0;">#{i+1}. {c.get('title', '(제목 없음)')}</h4>
+                <div style="margin: 10px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 8px; background-color: #F8F9FA; border-radius: 6px;">
+                        <span><strong>총 {total_items}개</strong></span>
+                        <span style="color: {theme.colors['success']};"><strong>완료: {completed_items}개</strong></span>
+                    </div>
+                    {items_html}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            card_content += "<div style='text-align: center; color: #7F8C8D; padding: 20px;'>소품이 등록되지 않았습니다.</div>"
-        
-        card_content += "</div>"
-        
-        modern_card(
-            title=f"#{i+1}. {c.get('title', '(제목 없음)')}",
-            content=card_content,
-            status=None,
-            expandable=False
-        )
+            # 소품이 없는 경우
+            st.markdown(f"""
+            <div style="background-color: white; border-radius: 12px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #D1D5DB;">
+                <h4 style="color: #DC2626; margin: 0 0 15px 0;">#{i+1}. {c.get('title', '(제목 없음)')}</h4>
+                <div style="text-align: center; color: #7F8C8D; padding: 20px; background-color: #F8F9FA; border-radius: 6px;">
+                    소품이 등록되지 않았습니다.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
