@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 # UI 유틸: 달력 토글(기본 OFF), 오늘 기준 가장 가까운 날짜, 날짜 문자열 변환, 소품 상태 마커
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 from .ui_enhanced import (
-    ThemeManager, modern_card, modern_grid, 
+    modern_card, modern_grid, 
     loading_animation, success_animation, STATUS_STYLES
 )
 
@@ -56,17 +56,16 @@ def render():
     개선된 대시보드 렌더링
     모던한 카드 디자인과 향상된 사용자 경험 제공
     """
-    # 테마 적용
-    theme = ThemeManager()
-    theme.apply_theme()
-    
-    # 모던한 헤더
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, {theme.colors['primary']}, {theme.colors['secondary']}); 
-                padding: 30px; border-radius: 16px; margin-bottom: 30px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 2.5em;">🧭 대시보드</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 1.2em;">
-            콘텐츠 현황 요약
+    # 간단한 헤더 (크롬 다크모드에 반응)
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #DC2626, #1D4ED8); 
+                padding: 32px; border-radius: 20px; margin-bottom: 32px; text-align: center;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+        <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: 700;">
+            🧭 대시보드
+        </h1>
+        <p style="color: rgba(255,255,255,0.95); margin: 12px 0 0 0; font-size: 1.1em;">
+            콘텐츠 현황 요약 및 관리
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -194,7 +193,7 @@ def render():
 
     df = pd.DataFrame(rows)
 
-    # 모던한 테이블 스타일
+    # 간단한 테이블 제목
     st.markdown("### 📋 콘텐츠 목록")
     
     # 반응형 컬럼 너비 설정

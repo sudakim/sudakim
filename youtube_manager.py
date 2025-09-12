@@ -1,10 +1,4 @@
-# youtube_manager.py (상단)
-import streamlit as st
-from modules import storage
-from modules import dashboard, planning, props, timetable, uploads
-import requests, json
-from modules.github_store import _get, _auth_headers
-from modules.ui_enhanced import ThemeManager, modern_sidebar
+# youtube_manager.py - 유튜브 콘텐츠 매니저 (UI 개선 버전)
 import streamlit as st
 from modules import storage
 from modules import dashboard, planning, props, timetable, uploads
@@ -138,7 +132,7 @@ with st.sidebar.expander("🆘 강제 가져오기 (Gist)", expanded=False):
     st.caption(f"dates: {len(dc)} | first: {list(dc.keys())[:3] if dc else 'None'}")
 
 
-
+# 페이지 설정 (한 번만 설정)
 st.set_page_config(
     page_title="🎬 유튜브 콘텐츠 매니저", 
     page_icon="🎬", 
@@ -154,29 +148,212 @@ st.set_page_config(
 # ★ 앱 시작 시: GitHub/Gist/Local에서 자동 로드
 storage.load_state()
 
+# 간단한 사이드바 적용 (테마 시스템 제거)
+from modules.ui_enhanced import simple_sidebar
+simple_sidebar()
+
+# 기존 저장 섹션을 사이드바에 추가
 with st.sidebar:
-    st.markdown("### 💾 저장")
+    st.markdown("---")
+    st.markdown("### 💾 데이터 저장")
     st.toggle("자동 저장", key="_autosave", value=st.session_state.get("_autosave", True))
-    if st.button("수동 저장"):
+    if st.button("수동 저장", use_container_width=True):
         storage.save_state()
         st.success("저장 완료")
     src = st.session_state.get("_storage_source") or "unknown"
     when = st.session_state.get("_last_saved") or "-"
-    st.caption(f"소스: {src} / 최종 저장: {when}")
+    st.caption(f"💾 소스: {src}")
+    st.caption(f"🕒 최종 저장: {when}")
 
-# ... 탭 구성은 기존 그대로 ...
-st.set_page_config(
-    page_title="🎬 유튜브 콘텐츠 매니저", 
-    page_icon="🎬", 
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://github.com/your-repo/help',
-        'Report a bug': 'https://github.com/your-repo/bug',
-        'About': '# 유튜브 콘텐츠 매니저\n모던한 UI로 개선된 콘텐츠 관리 시스템'
+# 🔥 JavaScript + CSS 강력한 다크모드 감지 및 강제 적용 🔥
+st.markdown("""
+<script>
+// 🔥 강력한 다크모드 감지 및 실시간 적용 🔥
+function applyTheme() {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // 🎯 모든 가능한 메인 영역 선택자들
+    const selectors = [
+        '.stApp',
+        '.main', 
+        '.main .block-container',
+        'section[data-testid="main"]',
+        '[data-testid="stAppViewContainer"]',
+        '.element-container'
+    ];
+    
+    if (isDark) {
+        // 🌙 다크모드 강제 적용
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.style.setProperty('background-color', '#1F2937', 'important');
+        
+        // 모든 메인 영역에 다크모드 적용
+        selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.setProperty('background-color', '#1F2937', 'important');
+                el.style.setProperty('color', '#FFFFFF', 'important');
+            });
+        });
+        
+        // 🔥 모든 요소 강제 흰색 텍스트
+        document.querySelectorAll('*').forEach(el => {
+            if (!el.tagName.match(/^(BUTTON|INPUT|SELECT|TEXTAREA)$/)) {
+                el.style.setProperty('color', '#FFFFFF', 'important');
+            }
+        });
+        
+    } else {
+        // 🌞 라이트모드 강제 적용  
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.body.style.setProperty('background-color', '#FFFFFF', 'important');
+        
+        // 모든 메인 영역에 라이트모드 적용
+        selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.setProperty('background-color', '#FFFFFF', 'important');
+                el.style.setProperty('color', '#000000', 'important');
+            });
+        });
+        
+        // 🔥 모든 요소 강제 검은색 텍스트
+        document.querySelectorAll('*').forEach(el => {
+            if (!el.tagName.match(/^(BUTTON|INPUT|SELECT|TEXTAREA)$/)) {
+                el.style.setProperty('color', '#000000', 'important');
+            }
+        });
     }
-)
+}
 
+// 페이지 로드 시 즉시 적용
+applyTheme();
+
+// 다크모드 변경 감지하여 실시간 적용
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
+// DOM 변경 감지하여 새로운 요소에도 적용
+const observer = new MutationObserver(applyTheme);
+observer.observe(document.body, { childList: true, subtree: true });
+
+// 주기적으로도 체크 (보험용)
+setInterval(applyTheme, 1000);
+</script>
+
+<style>
+/* 🔥 스마트 CSS - 버튼/배너 색상 보존 🔥 */
+
+/* 라이트모드 기본값 */
+html, body, #root, .stApp, .main, .main > div, .block-container,
+section[data-testid="main"], [data-testid="stAppViewContainer"], 
+.element-container {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+}
+
+/* 일반 텍스트만 색상 변경 */
+.stMarkdown:not(.stButton *):not([style*="gradient"]) p,
+.stMarkdown:not(.stButton *):not([style*="gradient"]) div,
+.stMarkdown:not(.stButton *):not([style*="gradient"]) span,
+h1:not(.stButton *), h2:not(.stButton *), h3:not(.stButton *), 
+h4:not(.stButton *), h5:not(.stButton *), h6:not(.stButton *) {
+    color: #000000 !important;
+}
+
+/* 🔥 다크모드 스마트 적용 🔥 */
+@media (prefers-color-scheme: dark) {
+    html, body, #root, .stApp, .main, .main > div, .block-container,
+    section[data-testid="main"], [data-testid="stAppViewContainer"], 
+    .element-container {
+        background-color: #1F2937 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 일반 텍스트만 흰색으로 (버튼/배너 제외) */
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) p,
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) div,
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) span,
+    h1:not(.stButton *), h2:not(.stButton *), h3:not(.stButton *), 
+    h4:not(.stButton *), h5:not(.stButton *), h6:not(.stButton *) {
+        color: #FFFFFF !important;
+    }
+    
+    /* 사이드바 */
+    section[data-testid="stSidebar"], 
+    section[data-testid="stSidebar"] * {
+        background-color: #374151 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 정보박스들 */
+    .stInfo, .stSuccess, .stWarning, .stError {
+        background-color: #374151 !important;
+        color: #FFFFFF !important;
+    }
+}
+
+/* 🎨 버튼 스타일 보존 (라이트/다크 모드 공통) */
+.stButton > button {
+    background-color: #DC2626 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+
+/* 🎯 배너/그라데이션 스타일 보존 */
+[style*="gradient"] {
+    color: white !important; /* 그라데이션 배경에는 항상 흰 글씨 */
+}
+
+[style*="background-color: #DC2626"],
+[style*="background-color: rgb(220, 38, 38)"],
+[style*="background: linear-gradient"] {
+    color: white !important; /* 빨간색/그라데이션 배경에는 항상 흰 글씨 */
+}
+
+/* 🔥 달력 토글 스타일 개선 🔥 */
+.stCheckbox, .stToggle {
+    padding: 8px !important;
+    border-radius: 8px !important;
+}
+
+.stCheckbox label, .stToggle label {
+    font-weight: 500 !important;
+    padding: 4px 8px !important;
+}
+
+/* 토글 버튼 자체 스타일 */
+.stCheckbox input[type="checkbox"], 
+.stToggle input[type="checkbox"] {
+    accent-color: #DC2626 !important;
+    transform: scale(1.2) !important;
+}
+
+/* 달력 아이콘 버튼 스타일 */
+button[title*="달력"], 
+button[aria-label*="calendar"],
+.stButton button:contains("📅") {
+    background-color: #DC2626 !important;
+    color: #FFFFFF !important;
+    border: 2px solid #DC2626 !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    min-height: 40px !important;
+}
+
+/* 🔥 추가 강화: 탭 및 기타 컴포넌트 색상 보장 🔥 */
+.stTabs [data-baseweb="tab-list"] button {
+    color: #000000 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .stTabs [data-baseweb="tab-list"] button {
+        color: #FFFFFF !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 탭 구성
 dash_tab, tab1, tab2, tab3, tab4 = st.tabs(
     ["🏠 대시보드", "📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"]
 )
@@ -191,6 +368,3 @@ with tab3:
     timetable.render()
 with tab4:
     uploads.render()
-
-
-

@@ -4,7 +4,7 @@ import streamlit as st
 from datetime import date, datetime
 from typing import List
 from .ui_enhanced import (
-    ThemeManager, modern_card, modern_grid, modern_sidebar,
+    ThemeManager, modern_card, modern_grid,
     loading_animation, success_animation, error_animation, STATUS_STYLES
 )
 
@@ -44,11 +44,51 @@ def _fullcalendar(selected: date, key: str) -> date:
         from streamlit_calendar import calendar
     except Exception:
         return st.date_input("날짜", value=selected, key=f"{key}_di")
-    events=[{"start": to_datestr(d),"end": to_datestr(d),"display":"background","color":"rgba(255,76,76,.35)"} for d in collect_content_dates()]
-    options={
-        "locale":"ko","initialView":"dayGridMonth","initialDate":to_datestr(selected),
-        "height":520,"events":events,"headerToolbar":{"left":"prev,next today","center":"title","right":"dayGridMonth,listWeek"}
+    
+    # 콘텐츠가 있는 날짜에 마커 표시 (더 명확한 색상으로)
+    content_dates = collect_content_dates()
+    events = []
+    for d in content_dates:
+        events.append({
+            "start": to_datestr(d),
+            "end": to_datestr(d),
+            "display": "background",
+            "color": "rgba(220, 38, 38, 0.2)",  # 더 진한 빨간색
+            "borderColor": "#DC2626",
+            "textColor": "#DC2626"
+        })
+        # 날짜에 점 마커도 추가
+        events.append({
+            "start": to_datestr(d),
+            "end": to_datestr(d),
+            "title": "●",
+            "display": "list-item",
+            "color": "#DC2626",
+            "textColor": "#DC2626",
+            "borderColor": "#DC2626"
+        })
+    
+    options = {
+        "locale": "ko",
+        "initialView": "dayGridMonth",
+        "initialDate": to_datestr(selected),
+        "height": 520,
+        "events": events,
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "dayGridMonth,listWeek"
+        },
+        "dayMaxEvents": True,
+        "moreLinkClick": "popover",
+        "eventDisplay": "block",
+        # 달력 스타일 개선
+        "themeSystem": "standard",
+        "eventBackgroundColor": "#DC2626",
+        "eventBorderColor": "#DC2626",
+        "eventTextColor": "#FFFFFF"
     }
+    
     ret = calendar(options=options, key=f"{key}_cal")
     if isinstance(ret, dict) and ret.get("dateClick"):
         ds = ret["dateClick"].get("dateStr")
