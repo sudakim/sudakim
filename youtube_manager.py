@@ -239,36 +239,44 @@ setInterval(applyTheme, 1000);
 </script>
 
 <style>
-/* 🔥 극강 CSS - 무조건 적용 🔥 */
+/* 🔥 스마트 CSS - 버튼/배너 색상 보존 🔥 */
 
 /* 라이트모드 기본값 */
 html, body, #root, .stApp, .main, .main > div, .block-container,
 section[data-testid="main"], [data-testid="stAppViewContainer"], 
-.element-container, .stMarkdown, div, span, p, h1, h2, h3, h4, h5, h6 {
+.element-container {
     background-color: #FFFFFF !important;
     color: #000000 !important;
 }
 
-/* 🔥 다크모드 강제 적용 🔥 */
+/* 일반 텍스트만 색상 변경 */
+.stMarkdown:not(.stButton *):not([style*="gradient"]) p,
+.stMarkdown:not(.stButton *):not([style*="gradient"]) div,
+.stMarkdown:not(.stButton *):not([style*="gradient"]) span,
+h1:not(.stButton *), h2:not(.stButton *), h3:not(.stButton *), 
+h4:not(.stButton *), h5:not(.stButton *), h6:not(.stButton *) {
+    color: #000000 !important;
+}
+
+/* 🔥 다크모드 스마트 적용 🔥 */
 @media (prefers-color-scheme: dark) {
     html, body, #root, .stApp, .main, .main > div, .block-container,
     section[data-testid="main"], [data-testid="stAppViewContainer"], 
-    .element-container, .stMarkdown, div, span, p, h1, h2, h3, h4, h5, h6 {
+    .element-container {
         background-color: #1F2937 !important;
         color: #FFFFFF !important;
     }
     
-    /* 모든 텍스트 요소 강제 흰색 */
-    * {
+    /* 일반 텍스트만 흰색으로 (버튼/배너 제외) */
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) p,
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) div,
+    .stMarkdown:not(.stButton *):not([style*="gradient"]) span,
+    h1:not(.stButton *), h2:not(.stButton *), h3:not(.stButton *), 
+    h4:not(.stButton *), h5:not(.stButton *), h6:not(.stButton *) {
         color: #FFFFFF !important;
     }
     
-    /* 모든 배경 요소 강제 다크 */
-    *, *::before, *::after {
-        background-color: #1F2937 !important;
-    }
-    
-    /* 사이드바는 조금 더 어둡게 */
+    /* 사이드바 */
     section[data-testid="stSidebar"], 
     section[data-testid="stSidebar"] * {
         background-color: #374151 !important;
@@ -280,12 +288,56 @@ section[data-testid="main"], [data-testid="stAppViewContainer"],
         background-color: #374151 !important;
         color: #FFFFFF !important;
     }
-    
-    /* 버튼만 예외 */
-    .stButton > button {
-        background-color: #DC2626 !important;
-        color: #FFFFFF !important;
-    }
+}
+
+/* 🎨 버튼 스타일 보존 (라이트/다크 모드 공통) */
+.stButton > button {
+    background-color: #DC2626 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+
+/* 🎯 배너/그라데이션 스타일 보존 */
+[style*="gradient"] {
+    color: white !important; /* 그라데이션 배경에는 항상 흰 글씨 */
+}
+
+[style*="background-color: #DC2626"],
+[style*="background-color: rgb(220, 38, 38)"],
+[style*="background: linear-gradient"] {
+    color: white !important; /* 빨간색/그라데이션 배경에는 항상 흰 글씨 */
+}
+
+/* 🔥 달력 토글 스타일 개선 🔥 */
+.stCheckbox, .stToggle {
+    padding: 8px !important;
+    border-radius: 8px !important;
+}
+
+.stCheckbox label, .stToggle label {
+    font-weight: 500 !important;
+    padding: 4px 8px !important;
+}
+
+/* 토글 버튼 자체 스타일 */
+.stCheckbox input[type="checkbox"], 
+.stToggle input[type="checkbox"] {
+    accent-color: #DC2626 !important;
+    transform: scale(1.2) !important;
+}
+
+/* 달력 아이콘 버튼 스타일 */
+button[title*="달력"], 
+button[aria-label*="calendar"],
+.stButton button:contains("📅") {
+    background-color: #DC2626 !important;
+    color: #FFFFFF !important;
+    border: 2px solid #DC2626 !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    min-height: 40px !important;
 }
 
 /* 🔥 추가 강화: 탭 및 기타 컴포넌트 색상 보장 🔥 */
