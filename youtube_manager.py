@@ -4,6 +4,12 @@ from modules import storage
 from modules import dashboard, planning, props, timetable, uploads
 import requests, json
 from modules.github_store import _get, _auth_headers
+from modules.ui_enhanced import ThemeManager, modern_sidebar
+import streamlit as st
+from modules import storage
+from modules import dashboard, planning, props, timetable, uploads
+import requests, json
+from modules.github_store import _get, _auth_headers
 
 # ===== 🆘 강제 가져오기(원클릭 복구) =====
 # 사이드바 어딘가에 붙이세요 (imports는 블록 안에 포함됨)
@@ -133,7 +139,17 @@ with st.sidebar.expander("🆘 강제 가져오기 (Gist)", expanded=False):
 
 
 
-st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
+st.set_page_config(
+    page_title="🎬 유튜브 콘텐츠 매니저", 
+    page_icon="🎬", 
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/your-repo/help',
+        'Report a bug': 'https://github.com/your-repo/bug',
+        'About': '# 유튜브 콘텐츠 매니저\n모던한 UI로 개선된 콘텐츠 관리 시스템'
+    }
+)
 
 # ★ 앱 시작 시: GitHub/Gist/Local에서 자동 로드
 storage.load_state()
@@ -146,10 +162,20 @@ with st.sidebar:
         st.success("저장 완료")
     src = st.session_state.get("_storage_source") or "unknown"
     when = st.session_state.get("_last_saved") or "-"
-    st.caption(f"source: {src} / last saved: {when}")
+    st.caption(f"소스: {src} / 최종 저장: {when}")
 
 # ... 탭 구성은 기존 그대로 ...
-st.set_page_config(page_title="유튜브 콘텐츠 매니저", page_icon="🎬", layout="wide")
+st.set_page_config(
+    page_title="🎬 유튜브 콘텐츠 매니저", 
+    page_icon="🎬", 
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/your-repo/help',
+        'Report a bug': 'https://github.com/your-repo/bug',
+        'About': '# 유튜브 콘텐츠 매니저\n모던한 UI로 개선된 콘텐츠 관리 시스템'
+    }
+)
 
 dash_tab, tab1, tab2, tab3, tab4 = st.tabs(
     ["🏠 대시보드", "📝 콘텐츠 기획", "🛍️ 소품 구매", "⏰ 타임테이블", "📹 영상 업로드 현황"]
