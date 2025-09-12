@@ -171,42 +171,53 @@ st.markdown("""
 // 🔥 강력한 다크모드 감지 및 실시간 적용 🔥
 function applyTheme() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const stApp = document.querySelector('.stApp');
-    const main = document.querySelector('.main');
+    
+    // 🎯 모든 가능한 메인 영역 선택자들
+    const selectors = [
+        '.stApp',
+        '.main', 
+        '.main .block-container',
+        'section[data-testid="main"]',
+        '[data-testid="stAppViewContainer"]',
+        '.element-container'
+    ];
     
     if (isDark) {
         // 🌙 다크모드 강제 적용
-        if (stApp) {
-            stApp.style.setProperty('background-color', '#1F2937', 'important');
-            stApp.style.setProperty('color', '#FFFFFF', 'important');
-        }
-        if (main) {
-            main.style.setProperty('background-color', '#1F2937', 'important');
-            main.style.setProperty('color', '#FFFFFF', 'important');
-        }
         document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.style.setProperty('background-color', '#1F2937', 'important');
         
-        // 모든 텍스트 요소를 흰색으로 강제 설정
+        // 모든 메인 영역에 다크모드 적용
+        selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.setProperty('background-color', '#1F2937', 'important');
+                el.style.setProperty('color', '#FFFFFF', 'important');
+            });
+        });
+        
+        // 🔥 모든 요소 강제 흰색 텍스트
         document.querySelectorAll('*').forEach(el => {
-            if (el.tagName !== 'BUTTON') {
+            if (!el.tagName.match(/^(BUTTON|INPUT|SELECT|TEXTAREA)$/)) {
                 el.style.setProperty('color', '#FFFFFF', 'important');
             }
         });
-    } else {
-        // 🌞 라이트모드 강제 적용
-        if (stApp) {
-            stApp.style.setProperty('background-color', '#FFFFFF', 'important');
-            stApp.style.setProperty('color', '#000000', 'important');
-        }
-        if (main) {
-            main.style.setProperty('background-color', '#FFFFFF', 'important');
-            main.style.setProperty('color', '#000000', 'important');
-        }
-        document.documentElement.setAttribute('data-theme', 'light');
         
-        // 모든 텍스트 요소를 검은색으로 강제 설정
+    } else {
+        // 🌞 라이트모드 강제 적용  
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.body.style.setProperty('background-color', '#FFFFFF', 'important');
+        
+        // 모든 메인 영역에 라이트모드 적용
+        selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.setProperty('background-color', '#FFFFFF', 'important');
+                el.style.setProperty('color', '#000000', 'important');
+            });
+        });
+        
+        // 🔥 모든 요소 강제 검은색 텍스트
         document.querySelectorAll('*').forEach(el => {
-            if (el.tagName !== 'BUTTON') {
+            if (!el.tagName.match(/^(BUTTON|INPUT|SELECT|TEXTAREA)$/)) {
                 el.style.setProperty('color', '#000000', 'important');
             }
         });
