@@ -1,6 +1,7 @@
 # modules/props.py
 from __future__ import annotations
 import streamlit as st
+import pandas as pd
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 from modules import storage
 from .ui_enhanced import ThemeManager, STATUS_STYLES, success_animation
@@ -77,20 +78,18 @@ def render():
     st.markdown("---")
     st.markdown(f"### 📊 {d.strftime('%m월 %d일')} 소품 현황")
     
-    # 모던한 카드 레이아웃으로 개선
+    # 간단한 테이블 형태로 소품 현황 표시
     for i, c in enumerate(contents):
         cid = c.get("id")
         items = st.session_state.get("content_props", {}).get(cid, [])
         
-        # 콘텐츠별 소품 요약 카드
+        # 콘텐츠 제목과 요약 정보
+        st.subheader(f"📋 #{i+1}. {c.get('title', '(제목 없음)')}")
+        
         if items:
-            total_items = sum(p.get('quantity', 1) for p in items)
-            completed_items = len([p for p in items if p.get('status') == '수령완료'])
-            
-            # 소품 목록 HTML 생성
-            items_html = ""
+            # 데이터 검증 및 정리
+            clean_items = []
             for p in items:
-                # 🔍 데이터 검증 및 정리
                 name = str(p.get('name', '')).strip()
                 vendor = str(p.get('vendor', '')).strip()
                 quantity = p.get('quantity', 1)
@@ -100,44 +99,42 @@ def render():
                 if not name or name in ['ㅇ', 'ㅇㅇ', ''] or len(name.strip()) < 1:
                     continue
                     
-                # 특수문자 정리 (] 같은 잘못된 문자 제거)
+                # 특수문자 정리
                 name = name.replace(']', '').replace('[', '').strip()
                 vendor = vendor.replace(']', '').replace('[', '').strip()
                 
                 # 빈 vendor는 '기타'로 설정
                 if not vendor:
                     vendor = '기타'
-                    
+                
+                # 상태 아이콘 추가
                 status_info = STATUS_STYLES.get(status, {})
-                items_html += f"""
-                <div style="padding: 8px; margin: 4px 0; background-color: rgba(0,0,0,0.05); border-radius: 6px;">
-                    <strong>{name}</strong> | {vendor} | {quantity}개
-                    <span style="background-color: {status_info.get('bg_color', '#EBF5FB')}; color: {status_info.get('color', '#E74C3C')}; border: 1px solid {status_info.get('color', '#E74C3C')}; margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">
-                        {status_info.get('icon', '🔴')} {status}
-                    </span>
-                </div>
-                """
+                status_display = f"{status_info.get('icon', '🔴')} {status}"
+                
+                clean_items.append({
+                    '소품명': name,
+                    '구매처': vendor,
+                    '수량': f"{quantity}개",
+                    '상태': status_display
+                })
             
-            # 전체 카드 HTML 생성
-            st.markdown(f"""
-            <div style="background-color: white; border-radius: 12px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #D1D5DB;">
-                <h4 style="color: #DC2626; margin: 0 0 15px 0;">#{i+1}. {c.get('title', '(제목 없음)')}</h4>
-                <div style="margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 8px; background-color: #F8F9FA; border-radius: 6px;">
-                        <span><strong>총 {total_items}개</strong></span>
-                        <span style="color: {theme.colors['success']};"><strong>완료: {completed_items}개</strong></span>
-                    </div>
-                    {items_html}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            if clean_items:
+                # 요약 정보
+                total_items = sum(int(item['수량'].replace('개', '')) for item in clean_items)
+                completed_items = len([item for item in clean_items if '수령완료' in item['상태']])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("전체 소품", f"{total_items}개")
+                with col2:
+                    st.metric("수령완료", f"{completed_items}개")
+                
+                # 간단한 테이블로 표시
+                df = pd.DataFrame(clean_items)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+            else:
+                st.info("유효한 소품 정보가 없습니다.")
         else:
-            # 소품이 없는 경우
-            st.markdown(f"""
-            <div style="background-color: white; border-radius: 12px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #D1D5DB;">
-                <h4 style="color: #DC2626; margin: 0 0 15px 0;">#{i+1}. {c.get('title', '(제목 없음)')}</h4>
-                <div style="text-align: center; color: #7F8C8D; padding: 20px; background-color: #F8F9FA; border-radius: 6px;">
-                    소품이 등록되지 않았습니다.
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.info("등록된 소품이 없습니다.")
+        
+        st.markdown("---")
