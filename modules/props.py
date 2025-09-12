@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 from .ui import date_picker_with_toggle, nearest_anchor_date_today, to_datestr, DOT
 from modules import storage
-from .ui_enhanced import ThemeManager, modern_card, STATUS_STYLES
+from .ui_enhanced import ThemeManager, modern_card, STATUS_STYLES, success_animation
 
 def render():
     """
