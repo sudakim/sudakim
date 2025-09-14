@@ -26,6 +26,12 @@ def _ensure_defaults():
     st.session_state.setdefault("_autosave", True)
     st.session_state.setdefault("_last_saved", None)
     st.session_state.setdefault("_storage_source", None)
+    # 최초 1회만 외부 저장소에서 로드하도록 가드 플래그
+    st.session_state.setdefault("_loaded_once", False)
+    # 마지막 스냅샷(변경 감지용)
+    st.session_state.setdefault("_last_snapshot", None)
+    # 주기 저장 타임스탬프(초)
+    st.session_state.setdefault("_last_autosave_ts", 0.0)
 
 def _hydrate(data: dict):
     if not isinstance(data, dict):
@@ -41,6 +47,10 @@ def _hydrate(data: dict):
 def load_state():
     _ensure_defaults()
 
+    # 이미 한 번 로드했다면 외부로부터 다시 덮어쓰지 않음(사용자 입력 보존)
+    if st.session_state.get("_loaded_once"):
+        return
+
     # A. Gist
     try:
         if hasattr(github_store, "gist_load"):
@@ -48,9 +58,13 @@ def load_state():
             if g:
                 _hydrate(g)
                 st.session_state["_storage_source"] = "gist"
+                st.session_state["_loaded_once"] = True
                 return
     except Exception as e:
-        st.sidebar.warning(f"Gist 로드 실패: {e}")
+        try:
+            st.sidebar.warning(f"Gist 로드 실패: {e}")
+        except Exception:
+            pass
 
     # B. Local
     if os.path.exists(STORE_PATH):
@@ -59,9 +73,16 @@ def load_state():
                 data = json.load(f)
             _hydrate(data)
             st.session_state["_storage_source"] = "local"
+            st.session_state["_loaded_once"] = True
             return
         except Exception as e:
-            st.sidebar.warning(f"Local 로드 실패: {e}")
+            try:
+                st.sidebar.warning(f"Local 로드 실패: {e}")
+            except Exception:
+                pass
+
+    # 외부에서 불러올 데이터가 없어도 중복 로드를 막기 위해 True로 설정
+    st.session_state["_loaded_once"] = True
 
 def _collect_payload() -> dict:
     return {
@@ -106,3 +127,41 @@ def save_state():
 def autosave_maybe():
     if st.session_state.get("_autosave", True):
         save_state()
+
+def _snapshot_str() -> str:
+    """현재 핵심 상태를 정렬된 JSON 문자열로 반환(변경 감지용)"""
+    core = {
+        "daily_contents": st.session_state.get("daily_contents", {}),
+        "content_props": st.session_state.get("content_props", {}),
+        "schedules": st.session_state.get("schedules", {}),
+        "upload_status": st.session_state.get("upload_status", {}),
+    }
+    try:
+        return json.dumps(core, ensure_ascii=False, sort_keys=True)
+    except Exception:
+        # 직렬화 실패 시에도 안전하게 문자열화
+        return str(core)
+
+def autosave_on_diff():
+    """상태가 변경되었으면 자동 저장"""
+    try:
+        snap = _snapshot_str()
+        if snap != st.session_state.get("_last_snapshot"):
+            if st.session_state.get("_autosave", True):
+                save_state()
+            st.session_state["_last_snapshot"] = snap
+    except Exception:
+        pass
+
+def autosave_interval_maybe(seconds: int = 20):
+    """주기적으로 자동 저장(실행 주기 내에서만 작동, 실제 타이머 아님)"""
+    try:
+        import time
+        now = time.time()
+        prev = float(st.session_state.get("_last_autosave_ts") or 0.0)
+        if now - prev >= max(1, seconds):
+            if st.session_state.get("_autosave", True):
+                save_state()
+            st.session_state["_last_autosave_ts"] = now
+    except Exception:
+        pass
