@@ -159,6 +159,11 @@ with st.sidebar:
     st.toggle("자동 저장", key="_autosave", value=st.session_state.get("_autosave", True))
     if st.button("수동 저장", use_container_width=True):
         storage.save_state()
+        try:
+            # 스냅샷 갱신으로 이후 변경 감지 정확도 향상
+            st.session_state["_last_snapshot"] = storage._snapshot_str()
+        except Exception:
+            pass
         st.success("저장 완료")
     src = st.session_state.get("_storage_source") or "unknown"
     when = st.session_state.get("_last_saved") or "-"
@@ -368,3 +373,27 @@ with tab3:
     timetable.render()
 with tab4:
     uploads.render()
+
+# ===== 전역 자동 저장 트리거 =====
+# 1) 상태 변경 감지 → 즉시 저장
+try:
+    storage.autosave_on_diff()
+except Exception:
+    pass
+# 2) 20초 주기 저장(사용자 토글이 켜져 있을 때만)
+try:
+    storage.autosave_interval_maybe(seconds=20)
+except Exception:
+    pass
+# 3) 가능하면 주기적 리프레시로 저장 보장
+try:
+    try:
+        from streamlit_autorefresh import st_autorefresh
+    except Exception:
+        st_autorefresh = None
+    if st_autorefresh:
+        _tick = st_autorefresh(interval=20000, limit=None, key="_autosave_tick")
+        # tick 마다 한 번 더 저장
+        storage.autosave_interval_maybe(seconds=1)
+except Exception:
+    pass
